@@ -672,7 +672,7 @@
 <header>
   <div class="brand">
     <h1>ImmunoDefense: Interactive Concept-Map Simulator</h1>
-    <p>Center-Out Network View &bull; Connect Innate &amp; Adaptive Nodes to Eliminate the Central Pathogen</p>
+    <p id="header-subtitle">Center-Out Network View &bull; Connect Innate &amp; Adaptive Nodes to Eliminate the Central Pathogen</p>
   </div>
   <div class="header-actions">
     <button id="btn-back-select" class="btn btn-outline hidden" onclick="showSelectionScreen()">&larr; Change Pathogen</button>
@@ -686,7 +686,7 @@
     <div>
       <h2 style="font-size:1.12rem; margin-bottom:0.2rem;">Step 1: Choose a Pathogen</h2>
       <p style="font-size:0.86rem; color:var(--muted);">
-        Select any course pathogen below. It will appear as the central target node surrounded by innate, bridge, adaptive, and regulatory effectors.
+        Select one of the pathogens listed below. It will appear as the central target node surrounded by innate, bridge, adaptive, and regulatory effectors.
       </p>
     </div>
     <div id="cleared-counter" style="font-size:0.86rem; font-weight:700; color:var(--primary);">
@@ -1739,9 +1739,10 @@ function showSelectionScreen() {
   document.getElementById("screen-battle").classList.add("hidden");
   document.getElementById("screen-select").classList.remove("hidden");
   document.getElementById("btn-back-select").classList.add("hidden");
+  document.getElementById("header-subtitle").innerHTML = "Center-Out Network View &bull; Connect Innate &amp; Adaptive Nodes to Eliminate the Central Pathogen";
   renderPathogenGrid();
 }
-
+  
 function startScenario(pathogenId) {
   const p = GAME_DATA.pathogens.find(item => item.id === pathogenId);
   if (!p) return;
@@ -1757,9 +1758,11 @@ function startScenario(pathogenId) {
   state.inspectedNodeId = "PATHOGEN";
   state.logs = [];
 
-  document.getElementById("screen-select").classList.add("hidden");
+ document.getElementById("screen-select").classList.add("hidden");
   document.getElementById("screen-battle").classList.remove("hidden");
   document.getElementById("btn-back-select").classList.remove("hidden");
+  document.getElementById("header-subtitle").innerHTML = "Spend 2 AP per day to connect 1&ndash;2 immune effectors, eliminating the pathogen within 6 days while balancing pathogen load against host tissue integrity.";
+```[cite: 13]
 
   // Populate Right-Hand Pathogen Dossier
   document.getElementById("right-cat-badge").textContent = p.classification ? `${p.category} • ${p.classification}` : p.category;
