@@ -690,7 +690,7 @@
       </p>
     </div>
     <div id="cleared-counter" style="font-size:0.86rem; font-weight:700; color:var(--primary);">
-      Scenarios Cleared: 0 / 9
+      Scenarios Cleared: 0 / 10
     </div>
   </div>
 
@@ -1030,6 +1030,23 @@ const GAME_DATA = {
       "unitTopic": "Superantigens, Fc Evasion & Neutrophils",
       "vignette": "Purulent abscess with toxin-mediated shock; Protein A blocks IgG Fc and TSST-1 nonspecifically activates ~20% of T cells.",
       "takeaway": "Complement C3b opsonization and Neutrophils clear abscesses, while Tregs (IL-10) are vital to blunt superantigen cytokine storm.",
+      "classification": "Gram-Positive"
+    },
+    {
+      "id": "LISTERIA",
+      "name": "Listeria monocytogenes",
+      "category": "Intracellular Bacterium",
+      "niche": "Intracellular (Host Cell Cytosol / Macrophages)",
+      "route": "Foodborne (unpasteurized dairy / deli meats)",
+      "pamps": "Peptidoglycan, Lipoteichoic acid (LTA), Flagellin, Cyclic di-AMP",
+      "prrs": "TLR2, NOD1/NOD2, STING, AIM2 / NLRP3 inflammasome",
+      "cytokines": "IL-12, IFN-gamma, TNF-alpha, IL-18, CCL2, CXCL9/10",
+      "evasion": "Listeriolysin O (LLO) lyses the phagosome membrane to escape into host cytosol; ActA polymerizes host actin for cell-to-cell spread (evading antibodies)",
+      "startingLoad": 100,
+      "replicationRate": 20,
+      "unitTopic": "Cytosolic Bacteria, CD8+ CTLs & Th1",
+      "vignette": "Gram-positive foodborne rod that escapes phagosomes via Listeriolysin O and spreads cell-to-cell via ActA actin comet tails.",
+      "takeaway": "Because LLO releases Listeria into the cytoplasm (loading peptides onto MHC Class I) and ActA spreads bacteria cell-to-cell without extracellular exposure, CD8+ CTLs and Th1 IFN-gamma-activated M1 macrophages are required—antibodies alone cannot reach cytosolic bacteria.",
       "classification": "Gram-Positive"
     }
   ],
@@ -1622,6 +1639,72 @@ const GAME_DATA = {
       "notes": "Unlocks adaptive immunity."
     },
     {
+      "pathogenId": "LISTERIA",
+      "effectorId": "CD8_CTL",
+      "baseDamage": 55,
+      "tissueDamage": 5,
+      "synergyWith": "TH1_IFN_G",
+      "synergyBonus": 30,
+      "outcomeTag": "Optimal_Adaptive",
+      "feedback": "Listeriolysin O (LLO) escape into the cytosol routes Listeria antigens onto MHC Class I—allowing CD8+ CTLs to lyse infected cells via perforin/granzyme!",
+      "notes": "Textbook cytosolic bacterium cleared by CD8+ CTLs."
+    },
+    {
+      "pathogenId": "LISTERIA",
+      "effectorId": "TH1_IFN_G",
+      "baseDamage": 45,
+      "tissueDamage": 5,
+      "synergyWith": "MACROPHAGE_M1",
+      "synergyBonus": 35,
+      "outcomeTag": "Optimal_Adaptive",
+      "feedback": "Th1 cells secrete IFN-gamma and TNF-alpha to activate M1 macrophages, killing Listeria before it can escape the phagosome via LLO!",
+      "notes": "Th1 + M1 macrophage activation."
+    },
+    {
+      "pathogenId": "LISTERIA",
+      "effectorId": "MACROPHAGE_M1",
+      "baseDamage": 15,
+      "tissueDamage": 5,
+      "synergyWith": "TH1_IFN_G",
+      "synergyBonus": 40,
+      "outcomeTag": "Needs_Opsonization",
+      "feedback": "TLR2/NOD2 and STING sense Listeria, but without Th1 IFN-gamma activation the bacterium uses Listeriolysin O to escape phagosomes into the cytosol.",
+      "notes": "LLO phagosomal escape."
+    },
+    {
+      "pathogenId": "LISTERIA",
+      "effectorId": "NK_CELL",
+      "baseDamage": 20,
+      "tissueDamage": 3,
+      "synergyWith": "MACROPHAGE_M1",
+      "synergyBonus": 20,
+      "outcomeTag": "Optimal_Innate",
+      "feedback": "Macrophage IL-12 and IL-18 stimulate NK cells to produce an early burst of innate IFN-gamma, partially restraining intracellular replication.",
+      "notes": "Early IL-12/IL-18 -> NK IFN-gamma loop."
+    },
+    {
+      "pathogenId": "LISTERIA",
+      "effectorId": "B_CELL_IGG",
+      "baseDamage": 5,
+      "tissueDamage": 2,
+      "synergyWith": "nan",
+      "synergyBonus": 0,
+      "outcomeTag": "Ineffective_Niche",
+      "feedback": "ActA actin-based motility propels Listeria directly from cell to cell without entering the extracellular space, shielding it from neutralizing IgG!",
+      "notes": "Cell-to-cell spread evades antibodies."
+    },
+    {
+      "pathogenId": "LISTERIA",
+      "effectorId": "DENDRITIC_CELL",
+      "baseDamage": 5,
+      "tissueDamage": 0,
+      "synergyWith": "nan",
+      "synergyBonus": 0,
+      "outcomeTag": "Bridge_Priming",
+      "feedback": "DCs sense Listeria via TLR2/STING, secreting IL-12 and presenting cytosolic peptides on MHC Class I and II to prime CD8+ CTLs and Th1 cells.",
+      "notes": "Primes both CD8+ CTL and Th1 arms."
+    },
+    {
       "pathogenId": "ALL_PATHOGENS",
       "effectorId": "TREG_IL10",
       "baseDamage": 0,
@@ -2210,6 +2293,20 @@ function renderPathogenArtwork(pathogenId, cx, cy) {
         <circle cx="${cx-11}" cy="${cy+10}" r="9.5" fill="#9f1239" stroke="#fda4af" stroke-width="1.8" />
         <circle cx="${cx+10}" cy="${cy+10}" r="9.5" fill="#be123c" stroke="#fda4af" stroke-width="1.8" />
         <circle cx="${cx}" cy="${cy-18}" r="7.5" fill="#9f1239" stroke="#fda4af" stroke-width="1.5" />
+      `;
+    case "LISTERIA":
+      // Gram-positive short rod with ActA host-actin comet tail
+      return `
+        <!-- ActA polymerized actin comet tail -->
+        <path d="M${cx-34},${cy+16} Q${cx-18},${cy+14} ${cx-8},${cy+4}" fill="none" stroke="#fda4af" stroke-width="6" stroke-linecap="round" opacity="0.45" />
+        <path d="M${cx-30},${cy+8} Q${cx-16},${cy+6} ${cx-6},${cy}" fill="none" stroke="#fecdd3" stroke-width="3" stroke-dasharray="3 3" stroke-linecap="round" />
+        <path d="M${cx-28},${cy+20} Q${cx-14},${cy+16} ${cx-4},${cy+7}" fill="none" stroke="#fecdd3" stroke-width="2.5" stroke-dasharray="2 3" stroke-linecap="round" />
+        <!-- Short Gram+ coccobacillus -->
+        <g transform="rotate(-28 ${cx+6} ${cy-4})">
+          <rect x="${cx-8}" y="${cy-12}" width="30" height="15" rx="7.5" fill="#9f1239" stroke="#fb7185" stroke-width="2.4" />
+          <circle cx="${cx+2}" cy="${cy-4.5}" r="2" fill="#fecdd3" />
+          <circle cx="${cx+11}" cy="${cy-4.5}" r="2" fill="#fecdd3" />
+        </g>
       `;
     default:
       return `<circle cx="${cx}" cy="${cy}" r="24" fill="#be123c" stroke="#fda4af" stroke-width="2" />`;
