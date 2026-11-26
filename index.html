@@ -1742,7 +1742,7 @@ function showSelectionScreen() {
   document.getElementById("header-subtitle").innerHTML = "Center-Out Network View &bull; Connect Innate &amp; Adaptive Nodes to Eliminate the Central Pathogen";
   renderPathogenGrid();
 }
-  
+
 function startScenario(pathogenId) {
   const p = GAME_DATA.pathogens.find(item => item.id === pathogenId);
   if (!p) return;
@@ -1758,11 +1758,10 @@ function startScenario(pathogenId) {
   state.inspectedNodeId = "PATHOGEN";
   state.logs = [];
 
- document.getElementById("screen-select").classList.add("hidden");
+  document.getElementById("screen-select").classList.add("hidden");
   document.getElementById("screen-battle").classList.remove("hidden");
   document.getElementById("btn-back-select").classList.remove("hidden");
   document.getElementById("header-subtitle").innerHTML = "Spend 2 AP per day to connect 1&ndash;2 immune effectors, eliminating the pathogen within 6 days while balancing pathogen load against host tissue integrity.";
-```[cite: 13]
 
   // Populate Right-Hand Pathogen Dossier
   document.getElementById("right-cat-badge").textContent = p.classification ? `${p.category} • ${p.classification}` : p.category;
