@@ -1,0 +1,2637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ImmunoDefense: Interactive Concept-Map Pathogen Simulator</title>
+<style>
+  :root {
+    --bg: #0b1120;
+    --panel: #111827;
+    --panel-alt: #1e293b;
+    --border: #334155;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --primary: #38bdf8;
+    --primary-dark: #0284c7;
+    --innate: #14b8a6;
+    --bridge: #f59e0b;
+    --adaptive: #818cf8;
+    --regulatory: #34d399;
+    --danger: #f43f5e;
+    --warning: #fbbf24;
+    --success: #10b981;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.45;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  @media (max-width: 1024px) {
+    body { height: auto; overflow: auto; }
+  }
+
+  header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem 1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .brand h1 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.01em;
+  }
+  .brand p {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.48rem 0.9rem;
+    border-radius: 0.45rem;
+    font-weight: 600;
+    font-size: 0.83rem;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+    text-decoration: none;
+  }
+  .btn-primary {
+    background: var(--primary-dark);
+    color: #fff;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--primary);
+    color: #0f172a;
+  }
+  .btn-outline {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--text);
+  }
+  .btn-outline:hover {
+    background: var(--panel-alt);
+    border-color: var(--primary);
+  }
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .hidden { display: none !important; }
+
+  /* SCREEN 1: PATHOGEN SELECTION */
+  #screen-select {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    max-width: 1360px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .intro-banner {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.1rem 1.4rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-bottom: 1.15rem;
+  }
+
+  .filter-chip {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 0.38rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .filter-chip.active, .filter-chip:hover {
+    background: var(--primary-dark);
+    color: #fff;
+    border-color: var(--primary);
+  }
+
+  .pathogen-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1.1rem;
+  }
+
+  .pathogen-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.15rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+  }
+  .pathogen-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary);
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 0.18rem 0.5rem;
+    border-radius: 0.35rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .badge-cat { background: rgba(56, 189, 248, 0.15); color: var(--primary); }
+  .badge-unit { background: rgba(129, 140, 248, 0.15); color: var(--adaptive); }
+  .badge-cleared { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+
+  .pathogen-card h3 {
+    font-size: 1.1rem;
+    margin: 0.45rem 0 0.25rem;
+    color: #fff;
+  }
+
+  .meta-list {
+    margin: 0.65rem 0;
+    font-size: 0.82rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.38rem;
+  }
+  .meta-item strong { color: #cbd5e1; }
+  .meta-item span { color: var(--muted); }
+
+  /* SCREEN 2: CONCEPT MAP WORKSPACE (LEFT TOOLKIT | CENTER MAP | RIGHT INSPECTOR) */
+  #screen-battle {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 310px 1fr 370px;
+    overflow: hidden;
+    height: calc(100vh - 64px);
+  }
+  @media (max-width: 1180px) {
+    #screen-battle {
+      grid-template-columns: 280px 1fr 330px;
+    }
+  }
+  @media (max-width: 960px) {
+    #screen-battle {
+      grid-template-columns: 1fr;
+      height: auto;
+      overflow: visible;
+    }
+  }
+
+  /* LEFT PANEL: IMMUNE EFFECTOR PALETTE */
+  .left-toolkit {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: rgba(15, 23, 42, 0.6);
+  }
+  .panel-header h2 {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .panel-header p {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 0.2rem;
+  }
+
+  .effector-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .effector-item {
+    background: #0f172a;
+    border: 1px solid var(--border);
+    border-radius: 0.55rem;
+    padding: 0.65rem 0.75rem;
+    cursor: pointer;
+    transition: all 0.14s ease;
+  }
+  .effector-item:hover:not(.locked) {
+    border-color: var(--primary);
+    background: var(--panel-alt);
+  }
+  .effector-item.selected {
+    border: 2px solid var(--primary);
+    background: rgba(56, 189, 248, 0.14);
+  }
+  .effector-item.locked {
+    opacity: 0.52;
+    cursor: pointer;
+  }
+
+  .eff-row-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.25rem;
+  }
+  .eff-branch {
+    font-size: 0.64rem;
+    font-weight: 700;
+    padding: 0.12rem 0.4rem;
+    border-radius: 0.25rem;
+    text-transform: uppercase;
+  }
+  .branch-innate { background: rgba(20, 184, 166, 0.18); color: var(--innate); }
+  .branch-bridge { background: rgba(245, 158, 11, 0.18); color: var(--bridge); }
+  .branch-adaptive { background: rgba(129, 140, 248, 0.18); color: var(--adaptive); }
+  .branch-reg { background: rgba(52, 211, 153, 0.18); color: var(--regulatory); }
+
+  .ap-pill {
+    font-size: 0.68rem;
+    font-weight: 700;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 0.1rem 0.4rem;
+    border-radius: 0.25rem;
+    color: #e2e8f0;
+  }
+
+  .effector-item h4 {
+    font-size: 0.86rem;
+    color: #fff;
+    margin-bottom: 0.2rem;
+  }
+  .eff-sub {
+    font-size: 0.72rem;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* CENTER PANEL: INTERACTIVE NETWORK CANVAS (PATHOGEN IN CENTER) */
+  .center-canvas-wrap {
+    position: relative;
+    background-color: #080d1a;
+    background-image:
+      radial-gradient(rgba(56, 189, 248, 0.14) 1px, transparent 1px),
+      radial-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-position: 0 0, 16px 16px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 540px;
+  }
+
+  /* Top Floating HUD over Map */
+  .map-hud-top {
+    position: absolute;
+    top: 0.85rem;
+    left: 0.85rem;
+    right: 0.85rem;
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    pointer-events: none;
+  }
+
+  .hud-pill-box {
+    pointer-events: auto;
+    background: rgba(17, 24, 39, 0.92);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+    padding: 0.55rem 0.85rem;
+    flex: 1;
+    min-width: 185px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  }
+
+  .hud-pill-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.25rem;
+  }
+
+  .mini-track {
+    width: 100%;
+    height: 9px;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .mini-fill {
+    height: 100%;
+    transition: width 0.35s ease;
+  }
+  .fill-pathogen { background: linear-gradient(90deg, #e11d48, #fb7185); }
+  .fill-health { background: linear-gradient(90deg, #059669, #34d399); }
+
+  .day-dots {
+    display: flex;
+    gap: 0.3rem;
+    margin-top: 0.25rem;
+  }
+  .day-dot {
+    flex: 1;
+    text-align: center;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.15rem 0;
+    border-radius: 0.25rem;
+    background: #0f172a;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .day-dot.active {
+    background: var(--primary-dark);
+    color: #fff;
+    border-color: var(--primary);
+  }
+  .day-dot.done {
+    background: rgba(16, 185, 129, 0.18);
+    color: var(--success);
+    border-color: rgba(16, 185, 129, 0.4);
+  }
+
+  /* SVG Concept Map Stage */
+  #concept-map-svg {
+    width: 100%;
+    height: 100%;
+    flex: 1;
+    display: block;
+    user-select: none;
+  }
+
+  .map-legend {
+    position: absolute;
+    bottom: 4.4rem;
+    left: 0.85rem;
+    background: rgba(17, 24, 39, 0.88);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 0.45rem 0.7rem;
+    font-size: 0.72rem;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    z-index: 10;
+  }
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .legend-line {
+    width: 18px;
+    height: 3px;
+    border-radius: 2px;
+  }
+
+  /* Bottom Action Bar over Map */
+  .map-action-bar {
+    position: absolute;
+    bottom: 0.85rem;
+    left: 0.85rem;
+    right: 0.85rem;
+    z-index: 10;
+    background: rgba(17, 24, 39, 0.94);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    border-radius: 0.65rem;
+    padding: 0.6rem 0.9rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  }
+
+  .queued-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    flex: 1;
+  }
+  .q-chip {
+    background: rgba(56, 189, 248, 0.2);
+    border: 1px solid var(--primary);
+    color: #fff;
+    padding: 0.22rem 0.55rem;
+    border-radius: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* RIGHT PANEL: PATHOGEN DOSSIER & NODE DESCRIPTIONS */
+  .right-inspector {
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 1rem;
+    gap: 0.9rem;
+  }
+
+  .inspector-card {
+    background: #0f172a;
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+    padding: 0.85rem;
+  }
+
+  .inspector-card h3 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .dossier-field {
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+  }
+  .dossier-field:last-child { margin-bottom: 0; }
+  .dossier-field .lbl {
+    font-weight: 700;
+    color: #cbd5e1;
+    display: block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+  }
+  .dossier-field .val {
+    color: var(--muted);
+  }
+
+  .node-detail-box {
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 0.55rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .log-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 260px;
+    overflow-y: auto;
+  }
+  .log-item {
+    background: var(--panel);
+    border-left: 3px solid var(--primary);
+    padding: 0.5rem 0.65rem;
+    border-radius: 0.3rem;
+    font-size: 0.78rem;
+  }
+  .log-item.optimal { border-left-color: var(--success); }
+  .log-item.trap { border-left-color: var(--danger); }
+  .log-item.warn { border-left-color: var(--warning); }
+  .log-item.synergy { border-left-color: var(--adaptive); }
+  .log-item .t {
+    font-size: 0.69rem;
+    font-weight: 700;
+    color: var(--muted);
+    margin-bottom: 0.15rem;
+  }
+  .log-item .mol-tag {
+    margin-top: 0.3rem;
+    padding: 0.2rem 0.45rem;
+    border-radius: 0.25rem;
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    color: #7dd3fc;
+    font-size: 0.71rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  /* SVG Animations & Styles */
+  @keyframes pulseRing {
+    0% { transform: scale(0.95); opacity: 0.75; }
+    70% { transform: scale(1.22); opacity: 0; }
+    100% { transform: scale(1.22); opacity: 0; }
+  }
+  .pathogen-pulse {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: pulseRing 2.4s infinite ease-out;
+  }
+  @keyframes dashFlow {
+    to { stroke-dashoffset: -24; }
+  }
+  .edge-animated {
+    stroke-dasharray: 6 6;
+    animation: dashFlow 0.9s linear infinite;
+  }
+  .node-group {
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+  }
+  .node-group:hover circle.node-bg {
+    stroke-width: 3.5px;
+  }
+
+  /* Modal Overlay */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.84);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 50;
+  }
+  .modal-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 0.85rem;
+    max-width: 640px;
+    width: 100%;
+    padding: 1.65rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.65);
+  }
+  .modal-title {
+    font-size: 1.4rem;
+    font-weight: 800;
+    margin-bottom: 0.4rem;
+  }
+  .modal-title.win { color: var(--success); }
+  .modal-title.lose { color: var(--danger); }
+
+  .debrief-box {
+    background: #0f172a;
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+    padding: 1rem;
+    margin: 1rem 0;
+    font-size: 0.88rem;
+  }
+  .debrief-box h4 {
+    color: var(--primary);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.35rem;
+  }
+  .node-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.65rem;
+  }
+  .node-tag {
+    background: rgba(56, 189, 248, 0.14);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    color: var(--primary);
+    font-size: 0.74rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 0.35rem;
+    text-decoration: none;
+  }
+  .node-tag:hover {
+    background: var(--primary-dark);
+    color: #fff;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>ImmunoDefense: Interactive Concept-Map Simulator</h1>
+    <p>Center-Out Network View &bull; Connect Innate &amp; Adaptive Nodes to Eliminate the Central Pathogen</p>
+  </div>
+  <div class="header-actions">
+    <button id="btn-back-select" class="btn btn-outline hidden" onclick="showSelectionScreen()">&larr; Change Pathogen</button>
+
+  </div>
+</header>
+
+<!-- SCREEN 1: PATHOGEN SELECTION -->
+<section id="screen-select">
+  <div class="intro-banner">
+    <div>
+      <h2 style="font-size:1.12rem; margin-bottom:0.2rem;">Step 1: Choose a Pathogen</h2>
+      <p style="font-size:0.86rem; color:var(--muted);">
+        Select any course pathogen below. It will appear as the central target node surrounded by innate, bridge, adaptive, and regulatory effectors.
+      </p>
+    </div>
+    <div id="cleared-counter" style="font-size:0.86rem; font-weight:700; color:var(--primary);">
+      Scenarios Cleared: 0 / 9
+    </div>
+  </div>
+
+  <div class="filter-bar" id="category-filters"></div>
+  <div class="pathogen-grid" id="pathogen-grid"></div>
+</section>
+
+<!-- SCREEN 2: INTERACTIVE CONCEPT MAP BATTLEGROUND -->
+<section id="screen-battle" class="hidden">
+  <!-- LEFT: IMMUNE EFFECTOR PALETTE -->
+  <aside class="left-toolkit">
+    <div class="panel-header">
+      <h2>
+        <span>Immune Effectors</span>
+        <span id="ap-badge-header" style="color:var(--primary); font-size:0.8rem;">2 / 2 AP</span>
+      </h2>
+      <p>Click nodes to draw connections to the center pathogen</p>
+      <p style="font-size:0.72rem; color:#cbd5e1; margin-top:0.35rem; background:rgba(56, 189, 248, 0.1); border:1px solid rgba(56, 189, 248, 0.28); padding:0.35rem 0.5rem; border-radius:0.35rem; line-height:1.35;">
+        <strong>Action Points (AP):</strong> You have <strong>2 AP per turn</strong>. Innate effectors cost <strong>1 AP</strong> (pick two), while specialized Adaptive lymphocytes cost <strong>2 AP</strong> (full turn).
+      </p>
+    </div>
+    <div class="effector-scroll" id="effector-list"></div>
+  </aside>
+
+  <!-- CENTER: LIVE CONCEPT MAP CANVAS -->
+  <main class="center-canvas-wrap">
+    <!-- Floating HUD -->
+    <div class="map-hud-top">
+      <div class="hud-pill-box">
+        <div class="hud-pill-header">
+          <span>Pathogen Load</span>
+          <span id="hud-load-text" style="color:#fda4af;">100 / 100</span>
+        </div>
+        <div class="mini-track">
+          <div id="bar-pathogen" class="mini-fill fill-pathogen" style="width:100%;"></div>
+        </div>
+        <div style="font-size:0.69rem; color:var(--muted); margin-top:0.2rem;" id="hud-rep-rate">+20 / turn replication</div>
+      </div>
+
+      <div class="hud-pill-box">
+        <div class="hud-pill-header">
+          <span>Host Tissue Integrity</span>
+          <span id="hud-health-text" style="color:#6ee7b7;">100 / 100</span>
+        </div>
+        <div class="mini-track">
+          <div id="bar-health" class="mini-fill fill-health" style="width:100%;"></div>
+        </div>
+        <div style="font-size:0.69rem; color:var(--muted); margin-top:0.2rem;">Immunopathology threshold: 0</div>
+      </div>
+
+      <div class="hud-pill-box">
+        <div class="hud-pill-header">
+          <span id="hud-phase-label" style="color:var(--innate);">Innate Phase</span>
+          <span id="hud-apc-mini" style="color:var(--warning);">APC Unprimed</span>
+        </div>
+        <div class="day-dots" id="day-dots"></div>
+      </div>
+    </div>
+
+    <!-- Interactive SVG Network -->
+    <svg id="concept-map-svg" viewBox="0 0 860 660" preserveAspectRatio="xMidYMid meet"></svg>
+
+    <!-- Map Connection Legend -->
+    <div class="map-legend">
+      <span class="legend-item"><span class="legend-line" style="background:#38bdf8; border-top:1px dashed #fff;"></span> Queued Connection</span>
+      <span class="legend-item"><span class="legend-line" style="background:#10b981;"></span> Effective / Synergy Link</span>
+      <span class="legend-item"><span class="legend-line" style="background:#f59e0b;"></span> Partial / APC Priming</span>
+      <span class="legend-item"><span class="legend-line" style="background:#f43f5e;"></span> Trap / Tissue Damage</span>
+    </div>
+
+    <!-- Bottom Action Execution Bar -->
+    <div class="map-action-bar">
+      <div class="queued-chips" id="queued-chips">
+        <span style="font-size:0.78rem; color:var(--muted);">Select immune nodes on the left or click unlocked nodes on the map...</span>
+      </div>
+      <div style="display:flex; gap:0.5rem; align-items:center;">
+        <button class="btn btn-outline" style="padding:0.42rem 0.7rem; font-size:0.76rem;" onclick="clearSelection()">Clear</button>
+        <button id="btn-execute-turn" class="btn btn-primary" onclick="executeTurn()">
+          Trigger Connections (Day <span id="btn-day-num">1</span>) &rarr;
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- RIGHT PANEL: PATHOGEN DESCRIPTIONS, NODE INSPECTOR & LOG -->
+  <aside class="right-inspector">
+    <!-- Selected Node / Connection Inspector -->
+    <div id="node-inspector-card" class="node-detail-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;">
+        <span style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:var(--primary);" id="insp-tag">Central Pathogen Node</span>
+        <span style="font-size:0.7rem; color:var(--muted);" id="insp-subtag">Click any map node to inspect</span>
+      </div>
+      <div style="font-size:0.95rem; font-weight:700; color:#fff; margin-bottom:0.25rem;" id="insp-title">Pathogen Name</div>
+      <p style="font-size:0.8rem; color:#e2e8f0; margin-bottom:0.4rem;" id="insp-desc"></p>
+      <div style="font-size:0.75rem; color:var(--primary);" id="insp-molecules"></div>
+    </div>
+
+    <!-- Full Pathogen Dossier Descriptions -->
+    <div class="inspector-card">
+      <h3>
+        <span>Pathogen Dossier &amp; Clues</span>
+        <span class="badge badge-cat" id="right-cat-badge">Category</span>
+      </h3>
+      <div class="dossier-field">
+        <span class="lbl">Niche &amp; Route</span>
+        <span class="val" id="right-niche-route"></span>
+      </div>
+      <div class="dossier-field">
+        <span class="lbl">Key PAMPs</span>
+        <span class="val" id="right-pamps"></span>
+      </div>
+      <div class="dossier-field">
+        <span class="lbl">Host PRRs Engaged</span>
+        <span class="val" id="right-prrs"></span>
+      </div>
+      <div class="dossier-field">
+        <span class="lbl">Cytokines &amp; Chemokines</span>
+        <span class="val" id="right-cytokines"></span>
+      </div>
+      <div class="dossier-field">
+        <span class="lbl" style="color:#fda4af;">Virulence / Evasion Mechanism</span>
+        <span class="val" style="color:#fecdd3;" id="right-evasion"></span>
+      </div>
+    </div>
+
+    <!-- Step-by-Step Connection Log -->
+    <div class="inspector-card" style="flex:1; display:flex; flex-direction:column;">
+      <h3>
+        <span>Connection &amp; Pathway Log</span>
+        <span style="font-size:0.7rem; color:var(--muted);" id="log-count">0 steps</span>
+      </h3>
+      <div class="log-list" id="log-list"></div>
+    </div>
+  </aside>
+</section>
+
+<!-- ADAPTIVE TIMING POP-UP MODAL -->
+<div id="adaptive-lock-modal" class="modal-backdrop hidden" onclick="if(event.target===this) closeLockModal()">
+  <div class="modal-card" style="max-width:500px; border-color:var(--warning);">
+    <div style="display:flex; align-items:center; gap:0.55rem; margin-bottom:0.5rem;">
+      <span style="font-size:1.35rem;">&#128274;</span>
+      <h3 id="lock-modal-title" style="font-size:1.15rem; font-weight:800; color:var(--warning);">
+        Adaptive Lymphocyte Not Yet Available
+      </h3>
+    </div>
+    <p id="lock-modal-body" style="font-size:0.9rem; color:#e2e8f0; line-height:1.55; margin-bottom:0.85rem;"></p>
+    <div class="debrief-box" style="margin:0.75rem 0; padding:0.8rem;">
+      <h4 style="color:var(--primary); margin-bottom:0.25rem;">Why Adaptive Immunity Takes Days</h4>
+      <p id="lock-modal-tip" style="font-size:0.82rem; color:var(--muted);"></p>
+    </div>
+    <div style="display:flex; justify-content:flex-end; margin-top:1rem;">
+      <button class="btn btn-primary" onclick="closeLockModal()">Got It</button>
+    </div>
+  </div>
+</div>
+
+<!-- END OF MATCH DEBRIEF MODAL -->
+<div id="debrief-modal" class="modal-backdrop hidden">
+  <div class="modal-card">
+    <div id="modal-title" class="modal-title win">Pathogen Eliminated!</div>
+    <p id="modal-subtitle" style="font-size:0.9rem; color:var(--muted);"></p>
+
+    <div class="debrief-box">
+      <h4>Key Course Takeaway</h4>
+      <p id="modal-takeaway" style="color:#f1f5f9;"></p>
+
+      <div style="margin-top:0.95rem;">
+        <a id="modal-map-btn" href="https://immunologymap.github.io/" target="_blank" rel="noopener" class="btn btn-outline" style="width:100%; border-color:var(--primary); color:var(--primary);">
+          Explore Connected Nodes on The Immunology Concept Map &#8599;
+        </a>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-wrap:wrap; gap:0.65rem; justify-content:flex-end; margin-top:1.15rem;">
+      <button class="btn btn-outline" onclick="retryCurrentPathogen()">Replay Scenario</button>
+      <button class="btn btn-primary" onclick="closeModalAndReturn()">Choose Next Pathogen &rarr;</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const GAME_DATA = {
+  "settings": {
+    "Starting_Host_Health": 100,
+    "Max_Turns_Per_Scenario": 6,
+    "Action_Points_Per_Turn": 2,
+    "APC_Priming_Delay_Turns": 2,
+    "Concept_Map_Base_URL": "https://immunologymap.github.io/"
+  },
+  "pathogens": [
+    {
+      "id": "STREP_PNEUMO",
+      "name": "Streptococcus pneumoniae",
+      "category": "Extracellular Bacterium",
+      "niche": "Extracellular (Alveoli)",
+      "route": "Respiratory droplets",
+      "pamps": "Peptidoglycan, Lipoteichoic acid (LTA)",
+      "prrs": "TLR2/TLR1, TLR2/TLR6, NOD2",
+      "cytokines": "TNF-alpha, IL-1beta, IL-6, CXCL8 (IL-8), C5a",
+      "evasion": "Polysaccharide capsule inhibits C3b deposition and direct phagocytosis",
+      "startingLoad": 100,
+      "replicationRate": 20,
+      "unitTopic": "Innate Immunity & Complement",
+      "vignette": "68yo with lobar pneumonia; Gram+ diplococci with halo.",
+      "takeaway": "Encapsulated bacteria require Complement (C3b) or IgM/IgG opsonization before Neutrophils (recruited via CXCL8/C5a) can clear them.",
+      "classification": "Gram-Positive"
+    },
+    {
+      "id": "INFLUENZA_A",
+      "name": "Influenza A Virus",
+      "category": "Intracellular Virus",
+      "niche": "Intracellular (Airway Epithelium)",
+      "route": "Aerosol inhalation",
+      "pamps": "dsRNA, 5'-triphosphate ssRNA",
+      "prrs": "RIG-I, MDA5, TLR3, TLR7",
+      "cytokines": "IFN-alpha, IFN-beta, IFN-gamma, CXCL10, CCL2",
+      "evasion": "NS1 inhibits RIG-I/IFN signaling; downregulates MHC Class I",
+      "startingLoad": 100,
+      "replicationRate": 25,
+      "unitTopic": "Antiviral Immunity, NK & CD8+ T Cells",
+      "vignette": "Acute fever/myalgia with MHC-I downregulation on airway epithelium.",
+      "takeaway": "Type I IFNs induce an antiviral state, NK cells kill MHC-I-low targets early, and CD8+ CTLs clear infected cells.",
+      "classification": "RNA Virus (ssRNA)"
+    },
+    {
+      "id": "SCHISTOSOMA",
+      "name": "Schistosoma mansoni",
+      "category": "Helminth Parasite",
+      "niche": "Extracellular (Mesenteric Venules)",
+      "route": "Transdermal cercariae penetration",
+      "pamps": "Helminth glycans, Proteases, Omega-1",
+      "prrs": "TLR2, C-type lectin receptors (CLRs)",
+      "cytokines": "IL-4, IL-5, IL-13, CCL11 (Eotaxin), TSLP",
+      "evasion": "Macroscopic size (~1 cm) prevents phagocytosis",
+      "startingLoad": 100,
+      "replicationRate": 15,
+      "unitTopic": "Type 2 Immunity, IgE & Eosinophils",
+      "vignette": "Freshwater exposure with eosinophilia and portal hypertension.",
+      "takeaway": "Neutrophils cause frustrated phagocytosis; requires Th2 (IL-4/IL-5), IgE class-switching, and Eosinophil ADCC via CCL11."
+    },
+    {
+      "id": "M_TUBERCULOSIS",
+      "name": "Mycobacterium tuberculosis",
+      "category": "Intracellular Bacterium",
+      "niche": "Intracellular (Macrophage Phagosomes)",
+      "route": "Aerosol inhalation",
+      "pamps": "Mycolic acids, Lipoarabinomannan, CpG DNA",
+      "prrs": "TLR2, TLR9, NOD2, Mincle",
+      "cytokines": "IL-12, IFN-gamma, TNF-alpha, CCL2, CXCL9/10",
+      "evasion": "Blocks phagolysosome fusion inside resting macrophages",
+      "startingLoad": 100,
+      "replicationRate": 15,
+      "unitTopic": "Th1 Polarization & Granulomas",
+      "vignette": "Acid-fast bacilli surviving inside macrophage phagosomes.",
+      "takeaway": "DCs secrete IL-12 to polarize Th1 cells; Th1 IFN-gamma activates M1 macrophages to fuse phagolysosomes and form granulomas.",
+      "classification": "Acid-Fast (Weakly Gram-Positive)"
+    },
+    {
+      "id": "CANDIDA_ALBICANS",
+      "name": "Candida albicans",
+      "category": "Fungal Pathogen",
+      "niche": "Mucosal / Extracellular",
+      "route": "Mucosal barrier breach / Dysbiosis",
+      "pamps": "Beta-glucans, Mannans",
+      "prrs": "Dectin-1, Dectin-2, TLR2, TLR4",
+      "cytokines": "IL-6, IL-23, IL-17A, IL-22, CXCL1, CXCL8 (IL-8)",
+      "evasion": "Dimorphic switch from yeast to invasive pseudohyphae",
+      "startingLoad": 100,
+      "replicationRate": 20,
+      "unitTopic": "Th17 Immunity & Mucosal Defense",
+      "vignette": "Invasive mucocutaneous candidiasis after broad-spectrum antibiotics.",
+      "takeaway": "Dectin-1 triggers IL-6/IL-23 -> Th17 cells; IL-17 recruits Neutrophils via CXCL1/CXCL8 to clear hyphae."
+    },
+    {
+      "id": "SALMONELLA",
+      "name": "Salmonella enterica (Typhimurium/Typhi)",
+      "category": "Intracellular Bacterium",
+      "niche": "Intracellular (Macrophage Vacuoles / Gut)",
+      "route": "Fecal-oral (contaminated food/water)",
+      "pamps": "LPS, Flagellin, Type III Secretion System proteins",
+      "prrs": "TLR4, TLR5, NLRC4 / NLRP3 inflammasome",
+      "cytokines": "IL-12, IFN-gamma, IL-1beta, IL-18, TNF-alpha, CCL2",
+      "evasion": "SPI-2 effector proteins remodel Salmonella-containing vacuole (SCV) to evade lysosomal killing",
+      "startingLoad": 100,
+      "replicationRate": 20,
+      "unitTopic": "Innate Inflammasomes & Th1 Immunity",
+      "vignette": "Enteric fever and bacteremia after contaminated poultry; bacteria replicate inside macrophage vacuoles.",
+      "takeaway": "TLR4/5 and NLRC4 sense LPS/flagellin, but clearing vacuolar Salmonella requires DC IL-12 -> Th1 IFN-gamma M1 macrophage activation.",
+      "classification": "Gram-Negative"
+    },
+    {
+      "id": "HIV_1",
+      "name": "Human Immunodeficiency Virus (HIV-1)",
+      "category": "Intracellular Virus",
+      "niche": "Intracellular (CD4+ T Cells & Macrophages)",
+      "route": "Mucosal / Bloodborne transmission",
+      "pamps": "ssRNA, Reverse-transcribed viral cDNA",
+      "prrs": "TLR7, TLR8, cGAS-STING",
+      "cytokines": "IFN-alpha/beta, IL-15, CXCL10, CCL3/CCL4/CCL5 (CCR5 ligands)",
+      "evasion": "Nef downregulates MHC Class I; gp120 hypervariability; infects and depletes CD4+ T helper cells",
+      "startingLoad": 100,
+      "replicationRate": 20,
+      "unitTopic": "Viral Evasion & Acquired Immunodeficiency",
+      "vignette": "Retrovirus using gp120/CD4 + CCR5/CXCR4 to infect CD4+ T cells, progressively eroding adaptive helper immunity.",
+      "takeaway": "Early Type I IFNs, NK cells (sensing Nef-mediated MHC-I loss), and CD8+ CTLs control viremia before CD4+ T cell collapse.",
+      "classification": "RNA Virus (Retrovirus)"
+    },
+    {
+      "id": "E_COLI",
+      "name": "Escherichia coli (UPEC / Enteric)",
+      "category": "Extracellular Bacterium",
+      "niche": "Extracellular (Urinary / GI Mucosa)",
+      "route": "Ascending mucosal / Fecal-oral",
+      "pamps": "Lipopolysaccharide (LPS), Flagellin, Pili/Fimbriae",
+      "prrs": "TLR4 (with MD-2/CD14), TLR5, Complement",
+      "cytokines": "TNF-alpha, IL-1beta, IL-6, CXCL8 (IL-8), C3a/C5a",
+      "evasion": "O-antigen LPS variability; siderophores; fimbrial adhesion to uroepithelium",
+      "startingLoad": 100,
+      "replicationRate": 20,
+      "unitTopic": "Gram-Negative LPS, TLR4 & Complement",
+      "vignette": "Gram-negative rod causing acute pyelonephritis/urosepsis; massive LPS shedding risks endotoxic shock.",
+      "takeaway": "TLR4-LPS triggers CXCL8 neutrophil recruitment and Complement MAC lysis, but over-activation risks TNF-alpha septic shock (requiring Treg/IL-10 balance).",
+      "classification": "Gram-Negative"
+    },
+    {
+      "id": "STAPH_AUREUS",
+      "name": "Staphylococcus aureus",
+      "category": "Extracellular Bacterium",
+      "niche": "Extracellular (Skin / Soft Tissue / Blood)",
+      "route": "Skin barrier breach / Wound",
+      "pamps": "Peptidoglycan, Lipoteichoic acid, TSST-1 superantigen",
+      "prrs": "TLR2/TLR1, TLR2/TLR6, NOD2",
+      "cytokines": "IL-1beta, IL-6, TNF-alpha, IL-17A, CXCL8 (IL-8)",
+      "evasion": "Protein A binds Fc region of IgG (blocking opsonization); TSST-1 cross-links MHC-II and TCR V-beta (cytokine storm)",
+      "startingLoad": 100,
+      "replicationRate": 25,
+      "unitTopic": "Superantigens, Fc Evasion & Neutrophils",
+      "vignette": "Purulent abscess with toxin-mediated shock; Protein A blocks IgG Fc and TSST-1 nonspecifically activates ~20% of T cells.",
+      "takeaway": "Complement C3b opsonization and Neutrophils clear abscesses, while Tregs (IL-10) are vital to blunt superantigen cytokine storm.",
+      "classification": "Gram-Positive"
+    }
+  ],
+  "effectors": [
+    {
+      "id": "COMPLEMENT",
+      "name": "Complement Cascade (C3b / C5a / MAC)",
+      "branch": "Innate",
+      "apCost": 1,
+      "earliestTurn": 1,
+      "requiresPriming": false,
+      "prereq": "nan",
+      "molecules": "C3b, C3a, C5a (chemotaxis), C5b-9 MAC, MBL",
+      "role": "Opsonizes encapsulated/Protein-A microbes (C3b), recruits phagocytes (C5a), and forms MAC pores in Gram-negative outer membranes.",
+      "mapNode": "Complement System"
+    },
+    {
+      "id": "DENDRITIC_CELL",
+      "name": "Dendritic Cell (PRR Sensing & APC Priming)",
+      "branch": "Bridge (Innate->Adaptive)",
+      "apCost": 1,
+      "earliestTurn": 1,
+      "requiresPriming": false,
+      "prereq": "nan",
+      "molecules": "TLR2/4/5/7/9, Dectin-1, RIG-I, cGAS, MHC-I/II, CD80/86, CCR7/CCL19/21",
+      "role": "Senses PAMPs via PRRs and migrates via CCR7 to lymph nodes to present antigen and secrete polarizing cytokines (IL-12, IL-6/23, IL-4).",
+      "mapNode": "Dendritic Cells & Antigen Presentation"
+    },
+    {
+      "id": "NEUTROPHIL",
+      "name": "Neutrophils (Phagocytosis, ROS & NETs)",
+      "branch": "Innate",
+      "apCost": 1,
+      "earliestTurn": 1,
+      "requiresPriming": false,
+      "prereq": "nan",
+      "molecules": "CXCR1/2 (CXCL8/IL-8), Fc-gamma-R, CR1, NADPH Oxidase, NETs",
+      "role": "Recruited by CXCL8 (IL-8) and C5a; engulfs opsonized bacteria and traps extracellular microbes/fungi in NETs.",
+      "mapNode": "Neutrophils & Phagocytosis"
+    },
+    {
+      "id": "MACROPHAGE_M1",
+      "name": "Macrophages (TLR/Inflammasome & M1)",
+      "branch": "Innate / Effector",
+      "apCost": 1,
+      "earliestTurn": 1,
+      "requiresPriming": false,
+      "prereq": "nan",
+      "molecules": "TLR4, NLRC4/NLRP3, TNF-alpha, IL-1beta, IL-6, CCL2, iNOS/NO",
+      "role": "Produces pro-inflammatory cytokines/chemokines and kills intracellular bacteria once activated by IFN-gamma.",
+      "mapNode": "Macrophages & Inflammatory Cytokines"
+    },
+    {
+      "id": "NK_CELL",
+      "name": "Natural Killer (NK) Cells",
+      "branch": "Innate",
+      "apCost": 1,
+      "earliestTurn": 1,
+      "requiresPriming": false,
+      "prereq": "nan",
+      "molecules": "KIRs, NKG2D, CD16 (ADCC), Perforin, Granzyme B, IFN-gamma",
+      "role": "Kills virus-infected cells lacking MHC Class I (missing-self, e.g., Influenza/HIV) and secretes early IFN-gamma.",
+      "mapNode": "NK Cells & Innate Lymphoid Cells"
+    },
+    {
+      "id": "TYPE1_IFN",
+      "name": "Type I Interferons (IFN-alpha / IFN-beta)",
+      "branch": "Innate",
+      "apCost": 1,
+      "earliestTurn": 1,
+      "requiresPriming": false,
+      "prereq": "nan",
+      "molecules": "RIG-I, MDA5, TLR3/7, cGAS-STING, IFNAR, JAK1/TYK2, STAT1/2, PKR",
+      "role": "Triggered by viral nucleic acid PRRs; induces an antiviral state in neighboring cells and upregulates MHC Class I.",
+      "mapNode": "Type I Interferons & Antiviral State"
+    },
+    {
+      "id": "TH1_IFN_G",
+      "name": "CD4+ Th1 Cells & IFN-gamma",
+      "branch": "Adaptive",
+      "apCost": 2,
+      "earliestTurn": 3,
+      "requiresPriming": true,
+      "prereq": "DENDRITIC_CELL",
+      "molecules": "IL-12, T-bet, IFN-gamma, CXCR3 (CXCL9/10)",
+      "role": "Polarized by DC-derived IL-12; secretes IFN-gamma to classically activate macrophages against intracellular bacteria (Salmonella, M. tb).",
+      "mapNode": "CD4+ T Cells: Th1 Subset"
+    },
+    {
+      "id": "TH2_IGE",
+      "name": "CD4+ Th2 Cells (IL-4/IL-5/IL-13) & IgE",
+      "branch": "Adaptive",
+      "apCost": 2,
+      "earliestTurn": 3,
+      "requiresPriming": true,
+      "prereq": "DENDRITIC_CELL",
+      "molecules": "GATA3, IL-4, IL-5, IL-13, CCR4, IgE",
+      "role": "Polarized by IL-4; drives B-cell class switching to IgE and mobilizes eosinophils via IL-5 against helminths.",
+      "mapNode": "CD4+ T Cells: Th2 Subset"
+    },
+    {
+      "id": "TH17_IL17",
+      "name": "CD4+ Th17 Cells (IL-17A / IL-22)",
+      "branch": "Adaptive",
+      "apCost": 2,
+      "earliestTurn": 3,
+      "requiresPriming": true,
+      "prereq": "DENDRITIC_CELL",
+      "molecules": "ROR-gamma-t, IL-6, IL-23, TGF-beta, IL-17A, IL-22, CCR6 (CCL20)",
+      "role": "Polarized by IL-6 + IL-23; secretes IL-17 to induce CXCL8/CXCL1 chemokine gradients and massive neutrophil influx at mucosa.",
+      "mapNode": "CD4+ T Cells: Th17 Subset"
+    },
+    {
+      "id": "CD8_CTL",
+      "name": "CD8+ Cytotoxic T Lymphocytes (CTLs)",
+      "branch": "Adaptive",
+      "apCost": 2,
+      "earliestTurn": 3,
+      "requiresPriming": true,
+      "prereq": "DENDRITIC_CELL",
+      "molecules": "TCR-MHC Class I, IL-2, Perforin, Granzyme, FasL, CXCR3",
+      "role": "Eliminates virally infected cells (Influenza, HIV) presenting endogenous viral peptides on MHC Class I.",
+      "mapNode": "CD8+ Cytotoxic T Cells"
+    },
+    {
+      "id": "B_CELL_IGG",
+      "name": "B Cells & High-Affinity IgG / IgA",
+      "branch": "Adaptive",
+      "apCost": 2,
+      "earliestTurn": 3,
+      "requiresPriming": true,
+      "prereq": "DENDRITIC_CELL",
+      "molecules": "BCR, CD40-CD40L, Tfh (IL-21, CXCR5/CXCL13), IgM, IgG, IgA",
+      "role": "Neutralizes viruses/toxins (TSST-1) and opsonizes extracellular bacteria for Fc-receptor clearance.",
+      "mapNode": "B Cells, Tfh & Antibodies"
+    },
+    {
+      "id": "EOSINOPHIL",
+      "name": "Eosinophils & Mast Cells",
+      "branch": "Innate / Effector",
+      "apCost": 1,
+      "earliestTurn": 1,
+      "requiresPriming": false,
+      "prereq": "nan",
+      "molecules": "CCR3 (CCL11/Eotaxin), Fc-epsilon-RI, Major Basic Protein (MBP), Histamine",
+      "role": "Recruited by CCL11 (Eotaxin) and IL-5; degranulates onto IgE-coated helminths via ADCC.",
+      "mapNode": "Eosinophils, Mast Cells & Basophils"
+    },
+    {
+      "id": "TREG_IL10",
+      "name": "Regulatory T Cells (Tregs: IL-10 / TGF-beta)",
+      "branch": "Adaptive / Regulatory",
+      "apCost": 1,
+      "earliestTurn": 2,
+      "requiresPriming": false,
+      "prereq": "nan",
+      "molecules": "FoxP3, CD25, IL-2, IL-10, TGF-beta, CTLA-4",
+      "role": "Dampens cytokine storms (e.g., LPS sepsis or S. aureus TSST-1 superantigen) and restores host tissue integrity.",
+      "mapNode": "Regulatory T Cells & Tolerance"
+    }
+  ],
+  "interactions": [
+    {
+      "pathogenId": "STREP_PNEUMO",
+      "effectorId": "COMPLEMENT",
+      "baseDamage": 20,
+      "tissueDamage": 2,
+      "synergyWith": "NEUTROPHIL",
+      "synergyBonus": 35,
+      "outcomeTag": "Optimal_Innate",
+      "feedback": "Lectin/Alternative complement deposits C3b onto the bacterial capsule and releases C5a to recruit phagocytes!",
+      "notes": "Overcomes anti-phagocytic capsule."
+    },
+    {
+      "pathogenId": "STREP_PNEUMO",
+      "effectorId": "NEUTROPHIL",
+      "baseDamage": 10,
+      "tissueDamage": 15,
+      "synergyWith": "COMPLEMENT",
+      "synergyBonus": 40,
+      "outcomeTag": "Needs_Opsonization",
+      "feedback": "Unopsonized polysaccharide capsule resists phagocytosis, causing frustrated neutrophil degranulation and alveolar damage.",
+      "notes": "Needs C3b or IgG opsonization."
+    },
+    {
+      "pathogenId": "STREP_PNEUMO",
+      "effectorId": "B_CELL_IGG",
+      "baseDamage": 35,
+      "tissueDamage": 0,
+      "synergyWith": "NEUTROPHIL",
+      "synergyBonus": 45,
+      "outcomeTag": "Optimal_Adaptive",
+      "feedback": "Anti-capsular IgG opsonizes S. pneumoniae via Fc-gamma-R and activates classical complement!",
+      "notes": "Conjugate vaccine principle."
+    },
+    {
+      "pathogenId": "STREP_PNEUMO",
+      "effectorId": "CD8_CTL",
+      "baseDamage": 0,
+      "tissueDamage": 5,
+      "synergyWith": "nan",
+      "synergyBonus": 0,
+      "outcomeTag": "Ineffective_Niche",
+      "feedback": "CD8+ CTLs recognize peptides on MHC Class I of infected host cells\u2014ineffective against extracellular bacteria.",
+      "notes": "Niche mismatch trap."
+    },
+    {
+      "pathogenId": "STREP_PNEUMO",
+      "effectorId": "DENDRITIC_CELL",
+      "baseDamage": 5,
+      "tissueDamage": 0,
+      "synergyWith": "nan",
+      "synergyBonus": 0,
+      "outcomeTag": "Bridge_Priming",
+      "feedback": "DCs sense peptidoglycan/LTA via TLR2 and migrate via CCR7 to lymph nodes to prime Tfh and B cells.",
+      "notes": "Unlocks adaptive tools."
+    },
+    {
+      "pathogenId": "INFLUENZA_A",
+      "effectorId": "TYPE1_IFN",
+      "baseDamage": 25,
+      "tissueDamage": 0,
+      "synergyWith": "NK_CELL",
+      "synergyBonus": 20,
+      "outcomeTag": "Optimal_Innate",
+      "feedback": "RIG-I and TLR3/7 detect viral RNA, inducing IFN-alpha/beta and PKR to block viral replication in airway epithelium.",
+      "notes": "Core innate antiviral response."
+    },
+    {
+      "pathogenId": "INFLUENZA_A",
+      "effectorId": "NK_CELL",
+      "baseDamage": 30,
+      "tissueDamage": 5,
+      "synergyWith": "TYPE1_IFN",
+      "synergyBonus": 20,
+      "outcomeTag": "Optimal_Innate",
+      "feedback": "Influenza downregulated MHC Class I to evade CTLs\u2014triggering NK 'missing-self' killing via perforin/granzyme!",
+      "notes": "Missing-self recognition."
+    },
+    {
+      "pathogenId": "INFLUENZA_A",
+      "effectorId": "CD8_CTL",
+      "baseDamage": 55,
+      "tissueDamage": 5,
+      "synergyWith": "nan",
+      "synergyBonus": 0,
+      "outcomeTag": "Optimal_Adaptive",
+      "feedback": "CXCR3+ CD8+ CTLs follow CXCL10 gradients to the lung and kill infected epithelial cells presenting viral peptides on MHC-I.",
+      "notes": "Primary adaptive viral clearance."
+    },
+    {
+      "pathogenId": "INFLUENZA_A",
+      "effectorId": "NEUTROPHIL",
+      "baseDamage": 5,
+      "tissueDamage": 25,
+      "synergyWith": "nan",
+      "synergyBonus": 0,
+      "outcomeTag": "Immunopathology_Trap",
+      "feedback": "Excessive neutrophil ROS and NETs injure healthy alveoli without clearing intracellular virus!",
+      "notes": "Viral ARDS immunopathology."
+    },
+    {
+      "pathogenId": "INFLUENZA_A",
+      "effectorId": "DENDRITIC_CELL",
+      "baseDamage": 5,
+      "tissueDamage": 0,
+      "synergyWith": "nan",
+      "synergyBonus": 0,
+      "outcomeTag": "Bridge_Priming",
+      "feedback": "Cross-presenting DCs display viral antigens on MHC-I and secrete IL-12/Type I IFN to prime naive CD8+ T cells.",
+      "notes": "Cross-presentation."
+    },
+    {
+      "pathogenId": "SCHISTOSOMA",
+      "effectorId": "NEUTROPHIL",
+      "baseDamage": 0,
+      "tissueDamage": 30,
+      "synergyWith": "nan",
+      "synergyBonus": 0,
+      "outcomeTag": "Immunopathology_Trap",
+      "feedback": "Frustrated phagocytosis! Neutrophils cannot engulf a macroscopic helminth and damage host mesenteric vessels.",
+      "notes": "Type 1 vs Type 2 contrast."
+    },
+    {
+      "pathogenId": "SCHISTOSOMA",
+      "effectorId": "TH2_IGE",
+      "baseDamage": 25,
+      "tissueDamage": 2,
+      "synergyWith": "EOSINOPHIL",
+      "synergyBonus": 45,
+      "outcomeTag": "Optimal_Adaptive",
+      "feedback": "Th2 cells secrete IL-4 (driving B-cell IgE class-switching) and IL-5 (mobilizing eosinophils from bone marrow).",
+      "notes": "IL-4 -> IgE; IL-5 -> Eosinophils."
+    },
+    {
+      "pathogenId": "SCHISTOSOMA",
+      "effectorId": "EOSINOPHIL",
+      "baseDamage": 15,
+      "tissueDamage": 5,
+      "synergyWith": "TH2_IGE",
+      "synergyBonus": 50,
+      "outcomeTag": "Optimal_Effector",
+      "feedback": "Recruited by CCL11 (Eotaxin), eosinophils bind IgE-coated worms via Fc-epsilon-RI and release Major Basic Protein (ADCC)!",
+      "notes": "Helminth ADCC."
+    },
+    {
+      "pathogenId": "SCHISTOSOMA",
+      "effectorId": "DENDRITIC_CELL",
+      "baseDamage": 5,
+      "tissueDamage": 0,
+      "synergyWith": "nan",
+      "synergyBonus": 0,
+      "outcomeTag": "Bridge_Priming",
+      "feedback": "DCs sense helminth glycans via CLRs/TLR2 and migrate to lymph nodes to initiate GATA3+ Th2 polarization.",
+      "notes": "Unlocks Th2/IgE."
+    },
+    {
+      "pathogenId": "M_TUBERCULOSIS",
+      "effectorId": "MACROPHAGE_M1",
+      "baseDamage": 10,
+      "tissueDamage": 5,
+      "synergyWith": "TH1_IFN_G",
+      "synergyBonus": 45,
+      "outcomeTag": "Needs_Opsonization",
+      "feedback": "Resting macrophages engulf M. tuberculosis via TLR2/Mincle, but the bacterium blocks phagolysosome fusion until IFN-gamma arrives.",
+      "notes": "Requires Th1 IFN-gamma help."
+    },
+    {
+      "pathogenId": "M_TUBERCULOSIS",
+      "effectorId": "TH1_IFN_G",
+      "baseDamage": 55,
+      "tissueDamage": 5,
+      "synergyWith": "MACROPHAGE_M1",
+      "synergyBonus": 30,
+      "outcomeTag": "Optimal_Adaptive",
+      "feedback": "Th1 cells secrete IFN-gamma and TNF-alpha, converting infected macrophages into microbicidal M1 cells that fuse phagolysosomes!",
+      "notes": "Textbook Th1 + M1 synergy."
+    },
+    {
+      "pathogenId": "M_TUBERCULOSIS",
+      "effectorId": "DENDRITIC_CELL",
+      "baseDamage": 5,
+      "tissueDamage": 0,
+      "synergyWith": "nan",
+      "synergyBonus": 0,
+      "outcomeTag": "Bridge_Priming",
+      "feedback": "TLR2/9 engagement prompts DCs to secrete IL-12, driving T-bet expression and Th1 differentiation.",
+      "notes": "IL-12 -> Th1 axis."
+    },
+    {
+      "pathogenId": "CANDIDA_ALBICANS",
+      "effectorId": "TH17_IL17",
+      "baseDamage": 45,
+      "tissueDamage": 5,
+      "synergyWith": "NEUTROPHIL",
+      "synergyBonus": 30,
+      "outcomeTag": "Optimal_Adaptive",
+      "feedback": "Th17 cells secrete IL-17A and IL-22, inducing epithelial antimicrobial peptides and CXCL8 chemokine gradients for neutrophils.",
+      "notes": "Dectin-1 -> Th17 -> Neutrophil."
+    },
+    {
+      "pathogenId": "CANDIDA_ALBICANS",
+      "effectorId": "NEUTROPHIL",
+      "baseDamage": 25,
+      "tissueDamage": 8,
+      "synergyWith": "TH17_IL17",
+      "synergyBonus": 35,
+      "outcomeTag": "Optimal_Innate",
+      "feedback": "Neutrophils deploy NETs and oxidative burst to trap and kill invasive Candida hyphae.",
+      "notes": "Essential anti-fungal effector."
+    },
+    {
+      "pathogenId": "CANDIDA_ALBICANS",
+      "effectorId": "DENDRITIC_CELL",
+      "baseDamage": 5,
+      "tissueDamage": 0,
+      "synergyWith": "nan",
+      "synergyBonus": 0,
+      "outcomeTag": "Bridge_Priming",
+      "feedback": "Dectin-1 recognizes fungal beta-glucans, triggering DC secretion of IL-6 and IL-23 to polarize ROR-gamma-t+ Th17 cells.",
+      "notes": "Fungal CLR signaling."
+    },
+    {
+      "pathogenId": "SALMONELLA",
+      "effectorId": "MACROPHAGE_M1",
+      "baseDamage": 15,
+      "tissueDamage": 8,
+      "synergyWith": "TH1_IFN_G",
+      "synergyBonus": 45,
+      "outcomeTag": "Needs_Opsonization",
+      "feedback": "TLR4/5 and NLRC4 inflammasome trigger IL-1beta/IL-18, but Salmonella survives in modified vacuoles without Th1 IFN-gamma.",
+      "notes": "Intracellular vacuolar survival."
+    },
+    {
+      "pathogenId": "SALMONELLA",
+      "effectorId": "TH1_IFN_G",
+      "baseDamage": 55,
+      "tissueDamage": 5,
+      "synergyWith": "MACROPHAGE_M1",
+      "synergyBonus": 30,
+      "outcomeTag": "Optimal_Adaptive",
+      "feedback": "Th1-derived IFN-gamma activates macrophage iNOS and phagolysosomal killing to eradicate intracellular Salmonella!",
+      "notes": "Th1 clearance of vacuolar bacteria."
+    },
+    {
+      "pathogenId": "SALMONELLA",
+      "effectorId": "B_CELL_IGG",
+      "baseDamage": 20,
+      "tissueDamage": 0,
+      "synergyWith": "NEUTROPHIL",
+      "synergyBonus": 20,
+      "outcomeTag": "Optimal_Innate",
+      "feedback": "Anti-O-antigen IgG/IgA neutralizes extracellular Salmonella during bacteremic spread, though intracellular reservoirs remain.",
+      "notes": "Partial humoral control."
+    },
+    {
+      "pathogenId": "SALMONELLA",
+      "effectorId": "DENDRITIC_CELL",
+      "baseDamage": 5,
+      "tissueDamage": 0,
+      "synergyWith": "nan",
+      "synergyBonus": 0,
+      "outcomeTag": "Bridge_Priming",
+      "feedback": "Peyer's patch DCs sense LPS (TLR4) and flagellin (TLR5), migrating to mesenteric lymph nodes to secrete IL-12.",
+      "notes": "Mucosal APC priming."
+    },
+    {
+      "pathogenId": "HIV_1",
+      "effectorId": "TYPE1_IFN",
+      "baseDamage": 25,
+      "tissueDamage": 0,
+      "synergyWith": "NK_CELL",
+      "synergyBonus": 20,
+      "outcomeTag": "Optimal_Innate",
+      "feedback": "TLR7 and cGAS-STING sense viral RNA/cDNA, triggering IFN-alpha/beta and restriction factors (APOBEC3G/Tetherin) to slow replication.",
+      "notes": "Innate restriction factors."
+    },
+    {
+      "pathogenId": "HIV_1",
+      "effectorId": "NK_CELL",
+      "baseDamage": 30,
+      "tissueDamage": 5,
+      "synergyWith": "TYPE1_IFN",
+      "synergyBonus": 20,
+      "outcomeTag": "Optimal_Innate",
+      "feedback": "HIV Nef downregulates MHC-I to hide from CTLs, exposing infected CD4+ cells to NK missing-self cytotoxicity!",
+      "notes": "Nef vs NK cells."
+    },
+    {
+      "pathogenId": "HIV_1",
+      "effectorId": "CD8_CTL",
+      "baseDamage": 50,
+      "tissueDamage": 5,
+      "synergyWith": "B_CELL_IGG",
+      "synergyBonus": 20,
+      "outcomeTag": "Optimal_Adaptive",
+      "feedback": "HIV-specific CD8+ CTLs recognize Gag/Pol peptides on MHC-I and lyse infected reservoirs, driving down acute viral load.",
+      "notes": "Primary adaptive control."
+    },
+    {
+      "pathogenId": "HIV_1",
+      "effectorId": "B_CELL_IGG",
+      "baseDamage": 20,
+      "tissueDamage": 0,
+      "synergyWith": "NK_CELL",
+      "synergyBonus": 20,
+      "outcomeTag": "Optimal_Adaptive",
+      "feedback": "Anti-gp120/gp41 antibodies neutralize free virions and mediate NK-cell ADCC via CD16, though Env mutates rapidly.",
+      "notes": "Neutralization + ADCC."
+    },
+    {
+      "pathogenId": "HIV_1",
+      "effectorId": "DENDRITIC_CELL",
+      "baseDamage": 5,
+      "tissueDamage": 0,
+      "synergyWith": "nan",
+      "synergyBonus": 0,
+      "outcomeTag": "Bridge_Priming",
+      "feedback": "DCs sense HIV nucleic acids and cross-present viral antigens on MHC-I to prime CD8+ CTLs before CD4+ help declines.",
+      "notes": "Critical early priming."
+    },
+    {
+      "pathogenId": "E_COLI",
+      "effectorId": "COMPLEMENT",
+      "baseDamage": 30,
+      "tissueDamage": 5,
+      "synergyWith": "NEUTROPHIL",
+      "synergyBonus": 30,
+      "outcomeTag": "Optimal_Innate",
+      "feedback": "Complement forms the C5b-9 Membrane Attack Complex (MAC) directly lysing Gram-negative E. coli and releasing C5a.",
+      "notes": "Gram-negative MAC susceptibility."
+    },
+    {
+      "pathogenId": "E_COLI",
+      "effectorId": "NEUTROPHIL",
+      "baseDamage": 35,
+      "tissueDamage": 10,
+      "synergyWith": "COMPLEMENT",
+      "synergyBonus": 30,
+      "outcomeTag": "Optimal_Innate",
+      "feedback": "TLR4-LPS signaling induces epithelial CXCL8 (IL-8), recruiting neutrophils to phagocytose opsonized E. coli.",
+      "notes": "TLR4 -> CXCL8 -> Neutrophil."
+    },
+    {
+      "pathogenId": "E_COLI",
+      "effectorId": "MACROPHAGE_M1",
+      "baseDamage": 20,
+      "tissueDamage": 22,
+      "synergyWith": "nan",
+      "synergyBonus": 0,
+      "outcomeTag": "Immunopathology_Trap",
+      "feedback": "Heavy TLR4-LPS stimulation triggers massive TNF-alpha and IL-1beta release\u2014clearing bacteria but risking endotoxic shock!",
+      "notes": "Teaches LPS septic shock."
+    },
+    {
+      "pathogenId": "E_COLI",
+      "effectorId": "B_CELL_IGG",
+      "baseDamage": 35,
+      "tissueDamage": 0,
+      "synergyWith": "NEUTROPHIL",
+      "synergyBonus": 35,
+      "outcomeTag": "Optimal_Adaptive",
+      "feedback": "IgA/IgG against fimbriae and O-antigen blocks mucosal adhesion and enhances Fc-mediated neutrophil clearance.",
+      "notes": "Mucosal IgA + systemic IgG."
+    },
+    {
+      "pathogenId": "E_COLI",
+      "effectorId": "DENDRITIC_CELL",
+      "baseDamage": 5,
+      "tissueDamage": 0,
+      "synergyWith": "nan",
+      "synergyBonus": 0,
+      "outcomeTag": "Bridge_Priming",
+      "feedback": "TLR4/5 recognition of LPS and flagellin activates DCs to migrate to draining lymph nodes and prime B/T cells.",
+      "notes": "Unlocks adaptive humoral defense."
+    },
+    {
+      "pathogenId": "STAPH_AUREUS",
+      "effectorId": "COMPLEMENT",
+      "baseDamage": 25,
+      "tissueDamage": 3,
+      "synergyWith": "NEUTROPHIL",
+      "synergyBonus": 40,
+      "outcomeTag": "Optimal_Innate",
+      "feedback": "Because S. aureus Protein A blocks IgG Fc regions, Complement C3b opsonization and C5a chemotaxis are critical for phagocytosis!",
+      "notes": "C3b bypasses Protein A Fc blockade."
+    },
+    {
+      "pathogenId": "STAPH_AUREUS",
+      "effectorId": "NEUTROPHIL",
+      "baseDamage": 30,
+      "tissueDamage": 12,
+      "synergyWith": "COMPLEMENT",
+      "synergyBonus": 40,
+      "outcomeTag": "Optimal_Innate",
+      "feedback": "Neutrophils are the primary defense against S. aureus abscesses, killing bacteria via NADPH oxidase ROS and NETs.",
+      "notes": "Core anti-staphylococcal cell."
+    },
+    {
+      "pathogenId": "STAPH_AUREUS",
+      "effectorId": "B_CELL_IGG",
+      "baseDamage": 15,
+      "tissueDamage": 5,
+      "synergyWith": "NEUTROPHIL",
+      "synergyBonus": 15,
+      "outcomeTag": "Needs_Opsonization",
+      "feedback": "Surface Protein A binds IgG Fc backwards (preventing FcR phagocytosis), though antibodies still neutralize TSST-1 toxin!",
+      "notes": "Protein A evasion mechanism."
+    },
+    {
+      "pathogenId": "STAPH_AUREUS",
+      "effectorId": "TH1_IFN_G",
+      "baseDamage": 10,
+      "tissueDamage": 30,
+      "synergyWith": "nan",
+      "synergyBonus": 0,
+      "outcomeTag": "Immunopathology_Trap",
+      "feedback": "S. aureus TSST-1 superantigen cross-links MHC-II and TCR V-beta, triggering massive polyclonal T-cell TNF-alpha/IFN-gamma storm!",
+      "notes": "Superantigen toxic shock trap."
+    },
+    {
+      "pathogenId": "STAPH_AUREUS",
+      "effectorId": "DENDRITIC_CELL",
+      "baseDamage": 5,
+      "tissueDamage": 0,
+      "synergyWith": "nan",
+      "synergyBonus": 0,
+      "outcomeTag": "Bridge_Priming",
+      "feedback": "TLR2/NOD2 sensing of peptidoglycan activates DCs to prime Tfh and Th17 responses against S. aureus.",
+      "notes": "Unlocks adaptive immunity."
+    },
+    {
+      "pathogenId": "ALL_PATHOGENS",
+      "effectorId": "TREG_IL10",
+      "baseDamage": 0,
+      "tissueDamage": -25,
+      "synergyWith": "nan",
+      "synergyBonus": 0,
+      "outcomeTag": "Resolution_Healing",
+      "feedback": "Tregs secrete IL-10 and TGF-beta, suppressing excessive TNF-alpha/IL-6 cytokine storms and restoring host tissue integrity (+25 Health).",
+      "notes": "Essential counter-balance for sepsis/superantigens."
+    }
+  ]
+};
+
+// Radial layout positions around the central pathogen (430, 330)
+// Arranged cleanly like the source concept map: Innate on top/left, Bridge at top-right, Adaptive on right/bottom, Tregs at bottom-left
+const NODE_COORDS = {
+  "COMPLEMENT":     { x: 245, y: 145, short: "Complement", icon: "C3b" },
+  "NEUTROPHIL":     { x: 145, y: 245, short: "Neutrophils", icon: "PMN" },
+  "MACROPHAGE_M1":  { x: 135, y: 375, short: "Macrophages", icon: "MΦ" },
+  "NK_CELL":        { x: 215, y: 495, short: "NK Cells", icon: "NK" },
+  "TYPE1_IFN":      { x: 350, y: 115, short: "Type I IFNs", icon: "IFN" },
+  "DENDRITIC_CELL": { x: 515, y: 115, short: "Dendritic Cell", icon: "DC" },
+  "TH1_IFN_G":      { x: 645, y: 170, short: "CD4+ Th1", icon: "Th1" },
+  "TH17_IL17":      { x: 725, y: 275, short: "CD4+ Th17", icon: "Th17" },
+  "CD8_CTL":        { x: 730, y: 395, short: "CD8+ CTL", icon: "CTL" },
+  "B_CELL_IGG":     { x: 655, y: 505, short: "B Cells / IgG", icon: "IgG" },
+  "TH2_IGE":        { x: 525, y: 555, short: "CD4+ Th2 / IgE", icon: "Th2" },
+  "EOSINOPHIL":     { x: 385, y: 555, short: "Eosinophils", icon: "Eos" },
+  "TREG_IL10":      { x: 155, y: 495, short: "Tregs (IL-10)", icon: "Treg" }
+};
+// Adjust NK_CELL and TREG_IL10 slightly so zero overlap occurs
+NODE_COORDS["NK_CELL"]   = { x: 175, y: 465, short: "NK Cells", icon: "NK" };
+NODE_COORDS["TREG_IL10"] = { x: 265, y: 540, short: "Tregs (IL-10)", icon: "Treg" };
+
+const state = {
+  selectedCategory: "All",
+  clearedIds: new Set(),
+  currentPathogen: null,
+  turn: 1,
+  pathogenLoad: 100,
+  hostHealth: 100,
+  selectedEffectors: [],
+  apcPrimedTurn: null,
+  usedEffectorsHistory: new Set(),
+  // Persistent connections rendered in the center map:
+  // Map of effectorId -> { status: 'optimal'|'synergy'|'warn'|'trap', turn: number, label: string, partnerId?: string }
+  activeConnections: {},
+  inspectedNodeId: "PATHOGEN",
+  logs: []
+};
+
+function init() {
+  document.getElementById("modal-map-btn").href = GAME_DATA.settings.Concept_Map_Base_URL;
+  renderCategoryFilters();
+  renderPathogenGrid();
+}
+
+function renderCategoryFilters() {
+  const categories = ["All", ...new Set(GAME_DATA.pathogens.map(p => p.category))];
+  const bar = document.getElementById("category-filters");
+  bar.innerHTML = "";
+  categories.forEach(cat => {
+    const btn = document.createElement("button");
+    btn.className = "filter-chip" + (state.selectedCategory === cat ? " active" : "");
+    btn.textContent = cat;
+    btn.onclick = () => {
+      state.selectedCategory = cat;
+      renderCategoryFilters();
+      renderPathogenGrid();
+    };
+    bar.appendChild(btn);
+  });
+}
+
+function renderPathogenGrid() {
+  const grid = document.getElementById("pathogen-grid");
+  grid.innerHTML = "";
+  const filtered = state.selectedCategory === "All"
+    ? GAME_DATA.pathogens
+    : GAME_DATA.pathogens.filter(p => p.category === state.selectedCategory);
+
+  document.getElementById("cleared-counter").textContent =
+    `Scenarios Cleared: ${state.clearedIds.size} / ${GAME_DATA.pathogens.length}`;
+
+  filtered.forEach(p => {
+    const isCleared = state.clearedIds.has(p.id);
+    const card = document.createElement("div");
+    card.className = "pathogen-card";
+    card.innerHTML = `
+      <div>
+        <div style="display:flex; justify-content:flex-end; align-items:center; gap:0.4rem; flex-wrap:wrap;">
+          ${isCleared ? '<span class="badge badge-cleared">&#10003; Cleared</span>' : `<span class="badge badge-unit">${p.unitTopic}</span>`}
+        </div>
+        <h3>${p.name}</h3>
+        <div style="display:flex; gap:0.35rem; flex-wrap:wrap; align-items:center; margin:0.25rem 0 0.5rem;">
+          <span class="badge badge-cat">${p.category}</span>
+          ${p.classification ? `<span class="badge" style="background:rgba(245, 158, 11, 0.16); color:#fbbf24;">${p.classification}</span>` : ""}
+        </div>
+        <div class="meta-list">
+          <div class="meta-item"><strong>Niche:</strong> <span>${p.niche}</span></div>
+          <div class="meta-item"><strong>PAMPs:</strong> <span>${p.pamps}</span></div>
+          <div class="meta-item"><strong>PRRs:</strong> <span>${p.prrs}</span></div>
+          <div class="meta-item"><strong style="color:#fda4af;">Evasion:</strong> <span>${p.evasion}</span></div>
+        </div>
+      </div>
+      <button class="btn btn-primary" style="width:100%; margin-top:0.65rem;" onclick="startScenario('${p.id}')">
+        Place Pathogen in Center Map &rarr;
+      </button>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function showSelectionScreen() {
+  document.getElementById("screen-battle").classList.add("hidden");
+  document.getElementById("screen-select").classList.remove("hidden");
+  document.getElementById("btn-back-select").classList.add("hidden");
+  renderPathogenGrid();
+}
+
+function startScenario(pathogenId) {
+  const p = GAME_DATA.pathogens.find(item => item.id === pathogenId);
+  if (!p) return;
+
+  state.currentPathogen = p;
+  state.turn = 1;
+  state.pathogenLoad = p.startingLoad;
+  state.hostHealth = GAME_DATA.settings.Starting_Host_Health;
+  state.selectedEffectors = [];
+  state.apcPrimedTurn = null;
+  state.usedEffectorsHistory = new Set();
+  state.activeConnections = {};
+  state.inspectedNodeId = "PATHOGEN";
+  state.logs = [];
+
+  document.getElementById("screen-select").classList.add("hidden");
+  document.getElementById("screen-battle").classList.remove("hidden");
+  document.getElementById("btn-back-select").classList.remove("hidden");
+
+  // Populate Right-Hand Pathogen Dossier
+  document.getElementById("right-cat-badge").textContent = p.classification ? `${p.category} • ${p.classification}` : p.category;
+  document.getElementById("right-niche-route").textContent = `${p.niche} • Route: ${p.route}`;
+  document.getElementById("right-pamps").textContent = p.pamps;
+  document.getElementById("right-prrs").textContent = p.prrs;
+  document.getElementById("right-cytokines").textContent = p.cytokines;
+  document.getElementById("right-evasion").textContent = p.evasion;
+
+  addLog("Map Initialized", `Central node: ${p.name}. Select effectors to form pathway connections.`, "warn");
+  updateBattleUI();
+}
+
+function inspectNode(nodeId) {
+  state.inspectedNodeId = nodeId;
+  renderInspectorCard();
+}
+
+function renderInspectorCard() {
+  const p = state.currentPathogen;
+  const tagEl = document.getElementById("insp-tag");
+  const subtagEl = document.getElementById("insp-subtag");
+  const titleEl = document.getElementById("insp-title");
+  const descEl = document.getElementById("insp-desc");
+  const molEl = document.getElementById("insp-molecules");
+
+  if (state.inspectedNodeId === "PATHOGEN") {
+    tagEl.textContent = "Central Target Node";
+    tagEl.style.color = "#fb7185";
+    subtagEl.textContent = p.unitTopic;
+    titleEl.textContent = p.name;
+    descEl.textContent = `${p.category}${p.classification ? ` (${p.classification})` : ""} • Niche: ${p.niche} (${p.route})`;
+    molEl.textContent = `PAMPs: ${p.pamps} | PRRs: ${p.prrs}`;
+    return;
+  }
+
+  const eff = GAME_DATA.effectors.find(e => e.id === state.inspectedNodeId);
+  if (!eff) return;
+  const conn = state.activeConnections[eff.id];
+
+  tagEl.textContent = `${eff.branch} Node (${eff.apCost} AP)`;
+  tagEl.style.color = "var(--primary)";
+  subtagEl.textContent = conn ? `Connected on Day ${conn.turn}` : `Map Node: ${eff.mapNode}`;
+  titleEl.textContent = eff.name;
+  descEl.textContent = conn ? `Connection Result: ${conn.feedback}` : eff.role;
+  molEl.textContent = `Key Molecules: ${eff.molecules}`;
+}
+
+function getUsedAP() {
+  return state.selectedEffectors.reduce((sum, id) => {
+    const eff = GAME_DATA.effectors.find(e => e.id === id);
+    return sum + (eff ? eff.apCost : 0);
+  }, 0);
+}
+
+function isEffectorUnlocked(eff) {
+  if (state.turn < eff.earliestTurn) {
+    return { ok: false, reason: `Day ${eff.earliestTurn}+` };
+  }
+  if (eff.requiresPriming) {
+    if (state.apcPrimedTurn === null) {
+      return { ok: false, reason: "Needs DC Priming" };
+    }
+    const readyTurn = state.apcPrimedTurn + GAME_DATA.settings.APC_Priming_Delay_Turns;
+    if (state.turn < readyTurn) {
+      return { ok: false, reason: `Ready Day ${readyTurn}` };
+    }
+  }
+  return { ok: true, reason: "Ready" };
+}
+
+function toggleEffector(effId) {
+  inspectNode(effId);
+  const idx = state.selectedEffectors.indexOf(effId);
+  if (idx >= 0) {
+    state.selectedEffectors.splice(idx, 1);
+    updateBattleUI();
+    return;
+  }
+  const eff = GAME_DATA.effectors.find(e => e.id === effId);
+  if (!eff) return;
+  const status = isEffectorUnlocked(eff);
+  if (!status.ok) {
+    showAdaptiveLockModal(eff, status);
+    return;
+  }
+
+  const maxAP = GAME_DATA.settings.Action_Points_Per_Turn;
+  if (getUsedAP() + eff.apCost > maxAP) {
+    return;
+  }
+  state.selectedEffectors.push(effId);
+  updateBattleUI();
+}
+
+function clearSelection() {
+  state.selectedEffectors = [];
+  updateBattleUI();
+}
+
+function updateBattleUI() {
+  const p = state.currentPathogen;
+  const maxTurns = GAME_DATA.settings.Max_Turns_Per_Scenario;
+  const maxAP = GAME_DATA.settings.Action_Points_Per_Turn;
+  const usedAP = getUsedAP();
+
+  // Top HUD
+  document.getElementById("hud-load-text").textContent = `${Math.max(0, state.pathogenLoad)} / ${p.startingLoad}`;
+  document.getElementById("bar-pathogen").style.width = `${Math.max(0, Math.min(100, (state.pathogenLoad / p.startingLoad) * 100))}%`;
+  document.getElementById("hud-rep-rate").textContent = `+${p.replicationRate} / turn replication`;
+
+  const maxHealth = GAME_DATA.settings.Starting_Host_Health;
+  document.getElementById("hud-health-text").textContent = `${Math.max(0, state.hostHealth)} / ${maxHealth}`;
+  document.getElementById("bar-health").style.width = `${Math.max(0, Math.min(100, (state.hostHealth / maxHealth) * 100))}%`;
+
+  // Day Dots
+  const dotsEl = document.getElementById("day-dots");
+  dotsEl.innerHTML = "";
+  for (let t = 1; t <= maxTurns; t++) {
+    const d = document.createElement("div");
+    d.className = "day-dot" + (t === state.turn ? " active" : (t < state.turn ? " done" : ""));
+    d.textContent = `D${t}`;
+    dotsEl.appendChild(d);
+  }
+
+  const phaseLabel = document.getElementById("hud-phase-label");
+  phaseLabel.textContent = state.turn <= 2 ? "Innate Phase" : "Adaptive + Innate";
+  phaseLabel.style.color = state.turn <= 2 ? "var(--innate)" : "var(--adaptive)";
+
+  const apcMini = document.getElementById("hud-apc-mini");
+  if (state.apcPrimedTurn === null) {
+    apcMini.textContent = "APC Unprimed";
+    apcMini.style.color = "var(--warning)";
+  } else {
+    const readyTurn = state.apcPrimedTurn + GAME_DATA.settings.APC_Priming_Delay_Turns;
+    if (state.turn >= readyTurn) {
+      apcMini.textContent = "Adaptive Active";
+      apcMini.style.color = "var(--success)";
+    } else {
+      apcMini.textContent = `DC Migrating (D${readyTurn})`;
+      apcMini.style.color = "var(--primary)";
+    }
+  }
+
+  // Left Effector List
+  document.getElementById("ap-badge-header").textContent = `${maxAP - usedAP} / ${maxAP} AP`;
+  document.getElementById("btn-day-num").textContent = state.turn;
+
+  const listEl = document.getElementById("effector-list");
+  listEl.innerHTML = "";
+  GAME_DATA.effectors.forEach(eff => {
+    const status = isEffectorUnlocked(eff);
+    const isSelected = state.selectedEffectors.includes(eff.id);
+    const notEnoughAP = !isSelected && (usedAP + eff.apCost > maxAP);
+    const isLocked = !status.ok || notEnoughAP;
+    const isConnected = Boolean(state.activeConnections[eff.id]);
+
+    let branchClass = "branch-innate";
+    if (eff.branch.includes("Bridge")) branchClass = "branch-bridge";
+    else if (eff.branch.includes("Regulatory")) branchClass = "branch-reg";
+    else if (eff.branch.includes("Adaptive")) branchClass = "branch-adaptive";
+
+    const item = document.createElement("div");
+    item.className = `effector-item${isSelected ? " selected" : ""}${isLocked ? " locked" : ""}`;
+    item.onclick = () => toggleEffector(eff.id);
+
+    item.innerHTML = `
+      <div class="eff-row-top">
+        <span class="eff-branch ${branchClass}">${eff.branch.split("(")[0].trim()}</span>
+        <span class="ap-pill">${eff.apCost} AP</span>
+      </div>
+      <h4>${eff.name}</h4>
+      <div class="eff-sub">
+        <span>${isConnected ? "&#9679; Connected on map" : eff.mapNode}</span>
+        ${!status.ok ? `<span style="color:var(--warning); font-weight:700;">&#128274; ${status.reason}</span>` : (isSelected ? `<span style="color:var(--primary); font-weight:700;">Queued</span>` : "")}
+      </div>
+    `;
+    listEl.appendChild(item);
+  });
+
+  // Bottom Queued Chips
+  const qChips = document.getElementById("queued-chips");
+  if (state.selectedEffectors.length === 0) {
+    qChips.innerHTML = `<span style="font-size:0.77rem; color:var(--muted);">Select up to ${maxAP} AP of immune nodes on the left or map to preview connections...</span>`;
+  } else {
+    qChips.innerHTML = "";
+    state.selectedEffectors.forEach(id => {
+      const eff = GAME_DATA.effectors.find(e => e.id === id);
+      const chip = document.createElement("span");
+      chip.className = "q-chip";
+      chip.innerHTML = `${eff.name.split("(")[0].trim()} (${eff.apCost} AP) &times;`;
+      chip.onclick = () => toggleEffector(id);
+      qChips.appendChild(chip);
+    });
+  }
+
+  renderInspectorCard();
+  renderConceptMapSVG();
+  renderLogs();
+}
+
+function renderEffectorArtwork(effId, x, y) {
+  switch (effId) {
+    case "NEUTROPHIL":
+      // Polymorphonuclear cell with 3-lobed nucleus + azurophilic granules
+      return `
+        <path d="M${x-24},${y-6} C${x-26},${y-20} ${x-10},${y-27} ${x+4},${y-24} C${x+19},${y-22} ${x+27},${y-10} ${x+24},${y+5} C${x+21},${y+20} ${x+8},${y+26} ${x-7},${y+24} C${x-21},${y+22} ${x-23},${y+8} ${x-24},${y-6} Z"
+              fill="#134e4a" stroke="#2dd4bf" stroke-width="2" />
+        <!-- Multi-lobed nucleus -->
+        <circle cx="${x-8}" cy="${y-5}" r="6.5" fill="#5eead4" />
+        <circle cx="${x+7}" cy="${y-6}" r="6" fill="#5eead4" />
+        <circle cx="${x+1}" cy="${y+8}" r="6.5" fill="#5eead4" />
+        <path d="M${x-8},${y-5} Q${x},${y-8} ${x+7},${y-6} Q${x+6},${y+2} ${x+1},${y+8}" fill="none" stroke="#5eead4" stroke-width="3" />
+        <!-- Fine granules -->
+        <circle cx="${x-13}" cy="${y+9}" r="1.5" fill="#99f6e4" />
+        <circle cx="${x+13}" cy="${y+7}" r="1.5" fill="#99f6e4" />
+        <circle cx="${x}" cy="${y-15}" r="1.5" fill="#99f6e4" />
+      `;
+    case "MACROPHAGE_M1":
+      // Large amoeboid phagocyte with pseudopods & kidney-shaped nucleus
+      return `
+        <path d="M${x-26},${y-2} Q${x-31},${y-15} ${x-16},${y-21} Q${x-5},${y-30} ${x+8},${y-21} Q${x+26},${y-24} ${x+24},${y-6} Q${x+31},${y+8} ${x+16},${y+19} Q${x+4},${y+29} ${x-10},${y+21} Q${x-27},${y+20} ${x-26},${y-2} Z"
+              fill="#115e59" stroke="#14b8a6" stroke-width="2" />
+        <!-- Horseshoe / Kidney Nucleus -->
+        <path d="M${x-10},${y-6} C${x-12},${y-15} ${x+4},${y-16} ${x+7},${y-6} C${x+10},${y+4} ${x+4},${y+14} ${x-8},${y+11} C${x-3},${y+6} ${x-3},${y-2} ${x-10},${y-6} Z"
+              fill="#5eead4" />
+        <!-- Phagocytic vacuoles -->
+        <circle cx="${x+13}" cy="${y-7}" r="3" fill="none" stroke="#99f6e4" stroke-width="1.3" />
+        <circle cx="${x+12}" cy="${y+8}" r="2.5" fill="none" stroke="#99f6e4" stroke-width="1.3" />
+      `;
+    case "DENDRITIC_CELL":
+      // Stellate antigen-presenting cell with long branching dendrites
+      return `
+        <path d="M${x},${y-29} L${x+5},${y-13} L${x+22},${y-22} L${x+12},${y-6} L${x+29},${y+2} L${x+12},${y+8} L${x+20},${y+24} L${x+4},${y+13} L${x-3},${y+29} L${x-7},${y+13} L${x-23},${y+21} L${x-12},${y+5} L${x-29},${y-3} L${x-12},${y-8} L${x-19},${y-24} L${x-5},${y-13} Z"
+              fill="#78350f" stroke="#fbbf24" stroke-width="1.8" stroke-linejoin="round" />
+        <ellipse cx="${x}" cy="${y}" rx="9" ry="7" fill="#fde68a" />
+      `;
+    case "NK_CELL":
+      // Large granular lymphocyte with cytotoxic perforin/granzyme granules
+      return `
+        <circle cx="${x}" cy="${y}" r="23" fill="#134e4a" stroke="#2dd4bf" stroke-width="2" />
+        <circle cx="${x-4}" cy="${y-2}" r="12" fill="#5eead4" />
+        <circle cx="${x+12}" cy="${y-8}" r="2.3" fill="#f43f5e" />
+        <circle cx="${x+14}" cy="${y}" r="2.3" fill="#f43f5e" />
+        <circle cx="${x+11}" cy="${y+8}" r="2.3" fill="#f43f5e" />
+        <circle cx="${x+6}" cy="${y+13}" r="2" fill="#fda4af" />
+      `;
+    case "COMPLEMENT":
+      // Option 1C: C1q "Bouquet of Tulips" Classical Recognition Complex
+      return `
+        <circle cx="${x}" cy="${y}" r="24" fill="#0f172a" stroke="#14b8a6" stroke-width="1.6" />
+        <!-- Collagen-like stalk -->
+        <line x1="${x}" y1="${y-17}" x2="${x}" y2="${y-5}" stroke="#5eead4" stroke-width="3" stroke-linecap="round" />
+        <line x1="${x-3}" y1="${y-17}" x2="${x+3}" y2="${y-17}" stroke="#99f6e4" stroke-width="2" stroke-linecap="round" />
+        <!-- 6 diverging stems & globular heads -->
+        <line x1="${x}" y1="${y-5}" x2="${x-14}" y2="${y+6}" stroke="#2dd4bf" stroke-width="1.5" />
+        <line x1="${x}" y1="${y-5}" x2="${x-9}" y2="${y+11}" stroke="#2dd4bf" stroke-width="1.5" />
+        <line x1="${x}" y1="${y-5}" x2="${x-3}" y2="${y+13}" stroke="#2dd4bf" stroke-width="1.5" />
+        <line x1="${x}" y1="${y-5}" x2="${x+3}" y2="${y+13}" stroke="#2dd4bf" stroke-width="1.5" />
+        <line x1="${x}" y1="${y-5}" x2="${x+9}" y2="${y+11}" stroke="#2dd4bf" stroke-width="1.5" />
+        <line x1="${x}" y1="${y-5}" x2="${x+14}" y2="${y+6}" stroke="#2dd4bf" stroke-width="1.5" />
+        <circle cx="${x-14}" cy="${y+6}" r="2.7" fill="#14b8a6" stroke="#ccfbf1" stroke-width="1" />
+        <circle cx="${x-9}" cy="${y+11}" r="2.7" fill="#14b8a6" stroke="#ccfbf1" stroke-width="1" />
+        <circle cx="${x-3}" cy="${y+13}" r="2.7" fill="#14b8a6" stroke="#ccfbf1" stroke-width="1" />
+        <circle cx="${x+3}" cy="${y+13}" r="2.7" fill="#14b8a6" stroke="#ccfbf1" stroke-width="1" />
+        <circle cx="${x+9}" cy="${y+11}" r="2.7" fill="#14b8a6" stroke="#ccfbf1" stroke-width="1" />
+        <circle cx="${x+14}" cy="${y+6}" r="2.7" fill="#14b8a6" stroke="#ccfbf1" stroke-width="1" />
+      `;
+    case "TYPE1_IFN":
+      // Option 2B: IFNAR Receptor Dimerization + JAK/STAT Signal
+      return `
+        <circle cx="${x}" cy="${y}" r="24" fill="#0f172a" stroke="#38bdf8" stroke-width="1.6" />
+        <!-- Plasma membrane -->
+        <line x1="${x-20}" y1="${y+2}" x2="${x+20}" y2="${y+2}" stroke="#475569" stroke-width="2.5" stroke-linecap="round" />
+        <!-- IFNAR1 & IFNAR2 transmembrane chains -->
+        <line x1="${x-6}" y1="${y-8}" x2="${x-6}" y2="${y+13}" stroke="#38bdf8" stroke-width="2.6" stroke-linecap="round" />
+        <line x1="${x+6}" y1="${y-8}" x2="${x+6}" y2="${y+13}" stroke="#38bdf8" stroke-width="2.6" stroke-linecap="round" />
+        <!-- IFN ligand bridging extracellular domains -->
+        <ellipse cx="${x}" cy="${y-10}" rx="12" ry="6.5" fill="#0284c7" stroke="#bae6fd" stroke-width="1.4" />
+        <text x="${x}" y="${y-7.5}" text-anchor="middle" fill="#ffffff" font-size="6.8" font-weight="800">IFN</text>
+        <!-- Intracellular JAK1 / TYK2 kinases -->
+        <circle cx="${x-9}" cy="${y+9}" r="2.8" fill="#f59e0b" stroke="#fef08a" stroke-width="0.9" />
+        <circle cx="${x+9}" cy="${y+9}" r="2.8" fill="#f59e0b" stroke="#fef08a" stroke-width="0.9" />
+      `;
+    case "TH1_IFN_G":
+    case "TH2_IGE":
+    case "TH17_IL17":
+      // CD4+ Helper T Lymphocyte: large round nucleus + thin cytoplasm + surface TCR Y-receptors
+      const tColor = effId === "TH1_IFN_G" ? "#818cf8" : (effId === "TH2_IGE" ? "#c084fc" : "#a78bfa");
+      return `
+        <circle cx="${x}" cy="${y}" r="22" fill="#1e1b4b" stroke="${tColor}" stroke-width="2" />
+        <circle cx="${x}" cy="${y}" r="14.5" fill="${tColor}" opacity="0.85" />
+        <!-- Surface TCRs -->
+        <path d="M${x},${y-22} L${x},${y-27} M${x-3},${y-29} L${x},${y-27} L${x+3},${y-29}" stroke="#e0e7ff" stroke-width="1.6" fill="none" />
+        <path d="M${x+22},${y} L${x+27},${y} M${x+29},${y-3} L${x+27},${y} L${x+29},${y+3}" stroke="#e0e7ff" stroke-width="1.6" fill="none" />
+        <path d="M${x-22},${y} L${x-27},${y} M${x-29},${y-3} L${x-27},${y} L${x-29},${y+3}" stroke="#e0e7ff" stroke-width="1.6" fill="none" />
+      `;
+    case "CD8_CTL":
+      // Cytotoxic CD8+ T Cell with lytic granules
+      return `
+        <circle cx="${x}" cy="${y}" r="22" fill="#312e81" stroke="#818cf8" stroke-width="2.2" />
+        <circle cx="${x-3}" cy="${y}" r="13.5" fill="#6366f1" />
+        <circle cx="${x+12}" cy="${y-6}" r="2.4" fill="#fb7185" />
+        <circle cx="${x+12}" cy="${y+6}" r="2.4" fill="#fb7185" />
+        <path d="M${x},${y-22} L${x},${y-28} M${x-3},${y-30} L${x},${y-28} L${x+3},${y-30}" stroke="#c7d2fe" stroke-width="1.8" fill="none" />
+      `;
+    case "B_CELL_IGG":
+      // B Lymphocyte + Y-shaped Secreted IgG Antibodies
+      return `
+        <circle cx="${x-4}" cy="${y+2}" r="20" fill="#1e1b4b" stroke="#818cf8" stroke-width="2" />
+        <circle cx="${x-4}" cy="${y+2}" r="12.5" fill="#a5b4fc" />
+        <!-- Secreted Y-shaped IgG -->
+        <path d="M${x+15},${y-8} L${x+15},${y-15} M${x+10},${y-20} L${x+15},${y-15} L${x+20},${y-20}" stroke="#38bdf8" stroke-width="2.3" stroke-linecap="round" fill="none" />
+        <path d="M${x+18},${y+12} L${x+18},${y+6} M${x+14},${y+2} L${x+18},${y+6} L${x+22},${y+2}" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" fill="none" />
+      `;
+    case "EOSINOPHIL":
+      // Option 3A: Blood-Smear Eosinophil (Dense Refractive MBP Granules + Bilobed Nucleus)
+      return `
+        <circle cx="${x}" cy="${y}" r="24" fill="#4c0519" stroke="#fb7185" stroke-width="2" />
+        <!-- Dense refractive orange-red MBP/ECP granules filling cytoplasm -->
+        <circle cx="${x-14}" cy="${y-9}" r="2" fill="#fb923c" />
+        <circle cx="${x-7}" cy="${y-15}" r="2" fill="#fb923c" />
+        <circle cx="${x}" cy="${y-17}" r="2" fill="#fb923c" />
+        <circle cx="${x+8}" cy="${y-15}" r="2" fill="#fb923c" />
+        <circle cx="${x+14}" cy="${y-9}" r="2" fill="#fb923c" />
+        <circle cx="${x-16}" cy="${y}" r="2" fill="#fb923c" />
+        <circle cx="${x+16}" cy="${y}" r="2" fill="#fb923c" />
+        <circle cx="${x-14}" cy="${y+9}" r="2" fill="#fb923c" />
+        <circle cx="${x-8}" cy="${y+15}" r="2" fill="#fb923c" />
+        <circle cx="${x}" cy="${y+17}" r="2" fill="#fb923c" />
+        <circle cx="${x+8}" cy="${y+15}" r="2" fill="#fb923c" />
+        <circle cx="${x+14}" cy="${y+9}" r="2" fill="#fb923c" />
+        <circle cx="${x-3}" cy="${y-10}" r="1.8" fill="#fdba74" />
+        <circle cx="${x+4}" cy="${y-10}" r="1.8" fill="#fdba74" />
+        <circle cx="${x-4}" cy="${y+11}" r="1.8" fill="#fdba74" />
+        <circle cx="${x+4}" cy="${y+11}" r="1.8" fill="#fdba74" />
+        <!-- Bilobed spectacles nucleus -->
+        <line x1="${x-6}" y1="${y}" x2="${x+6}" y2="${y}" stroke="#f472b6" stroke-width="2.6" />
+        <ellipse cx="${x-7.5}" cy="${y}" rx="6.2" ry="8" fill="#9d174d" stroke="#f472b6" stroke-width="1.4" />
+        <ellipse cx="${x+7.5}" cy="${y}" rx="6.2" ry="8" fill="#9d174d" stroke="#f472b6" stroke-width="1.4" />
+      `;
+    case "TREG_IL10":
+      // Regulatory T Cell (FoxP3+): emerald lymphocyte with calming IL-10 halo
+      return `
+        <circle cx="${x}" cy="${y}" r="22" fill="#064e3b" stroke="#34d399" stroke-width="2" />
+        <circle cx="${x}" cy="${y}" r="14" fill="#34d399" opacity="0.85" />
+        <text x="${x}" y="${y+3.5}" text-anchor="middle" fill="#022c22" font-size="8.5" font-weight="900">FoxP3</text>
+      `;
+    default:
+      return `<circle cx="${x}" cy="${y}" r="22" fill="#1e293b" stroke="#38bdf8" stroke-width="2" />`;
+  }
+}
+
+function renderPathogenArtwork(pathogenId, cx, cy) {
+  switch (pathogenId) {
+    case "STREP_PNEUMO":
+      // Encapsulated lancet-shaped Gram+ diplococci surrounded by thick polysaccharide halo
+      return `
+        <ellipse cx="${cx}" cy="${cy}" rx="34" ry="23" fill="rgba(251, 113, 133, 0.16)" stroke="#fda4af" stroke-width="2" stroke-dasharray="3 2" />
+        <ellipse cx="${cx-10}" cy="${cy}" rx="11" ry="8.5" fill="#9f1239" stroke="#fb7185" stroke-width="2" />
+        <ellipse cx="${cx+10}" cy="${cy}" rx="11" ry="8.5" fill="#9f1239" stroke="#fb7185" stroke-width="2" />
+      `;
+    case "INFLUENZA_A":
+      // Enveloped orthomyxovirus with HA/NA surface spikes and segmented vRNA
+      return `
+        <g stroke="#fb7185" stroke-width="2.6" stroke-linecap="round">
+          <line x1="${cx}" y1="${cy-25}" x2="${cx}" y2="${cy-36}" />
+          <line x1="${cx}" y1="${cy+25}" x2="${cx}" y2="${cy+36}" />
+          <line x1="${cx-25}" y1="${cy}" x2="${cx-36}" y2="${cy}" />
+          <line x1="${cx+25}" y1="${cy}" x2="${cx+36}" y2="${cy}" />
+          <line x1="${cx-18}" y1="${cy-18}" x2="${cx-26}" y2="${cy-26}" />
+          <line x1="${cx+18}" y1="${cy-18}" x2="${cx+26}" y2="${cy-26}" />
+          <line x1="${cx-18}" y1="${cy+18}" x2="${cx-26}" y2="${cy+26}" />
+          <line x1="${cx+18}" y1="${cy+18}" x2="${cx+26}" y2="${cy+26}" />
+        </g>
+        <circle cx="${cx}" cy="${cy}" r="25" fill="#881337" stroke="#fda4af" stroke-width="2.2" />
+        <!-- 8 RNA segments -->
+        <line x1="${cx-10}" y1="${cy-10}" x2="${cx-10}" y2="${cy+10}" stroke="#fecdd3" stroke-width="2.2" stroke-linecap="round" />
+        <line x1="${cx-4}" y1="${cy-12}" x2="${cx-4}" y2="${cy+12}" stroke="#fecdd3" stroke-width="2.2" stroke-linecap="round" />
+        <line x1="${cx+2}" y1="${cy-11}" x2="${cx+2}" y2="${cy+11}" stroke="#fecdd3" stroke-width="2.2" stroke-linecap="round" />
+        <line x1="${cx+8}" y1="${cy-9}" x2="${cx+8}" y2="${cy+9}" stroke="#fecdd3" stroke-width="2.2" stroke-linecap="round" />
+      `;
+    case "SCHISTOSOMA":
+      // Macroscopic trematode helminth worm with oral/ventral suckers
+      return `
+        <path d="M${cx-24},${cy+18} C${cx-32},${cy-4} ${cx-12},${cy-28} ${cx+6},${cy-22} C${cx+24},${cy-16} ${cx+30},${cy+6} ${cx+16},${cy+20} C${cx+6},${cy+29} ${cx-8},${cy+14} ${cx},${cy+2} C${cx+6},${cy-6} ${cx+14},${cy+2} ${cx+8},${cy+10}"
+              fill="none" stroke="#fb7185" stroke-width="9" stroke-linecap="round" />
+        <path d="M${cx-24},${cy+18} C${cx-32},${cy-4} ${cx-12},${cy-28} ${cx+6},${cy-22} C${cx+24},${cy-16} ${cx+30},${cy+6} ${cx+16},${cy+20} C${cx+6},${cy+29} ${cx-8},${cy+14} ${cx},${cy+2}"
+              fill="none" stroke="#fecdd3" stroke-width="2" stroke-dasharray="3 4" stroke-linecap="round" />
+        <circle cx="${cx-24}" cy="${cy+18}" r="4.5" fill="#be123c" stroke="#fda4af" stroke-width="1.5" />
+      `;
+    case "M_TUBERCULOSIS":
+      // Slightly curved acid-fast bacilli rods with waxy mycolic acid coat
+      return `
+        <g transform="rotate(-22 ${cx} ${cy})">
+          <rect x="${cx-24}" y="${cy-14}" width="36" height="9" rx="4.5" fill="#9f1239" stroke="#fda4af" stroke-width="2" />
+          <rect x="${cx-12}" y="${cy+3}" width="38" height="9" rx="4.5" fill="#be123c" stroke="#fecdd3" stroke-width="2" />
+          <circle cx="${cx-14}" cy="${cy-9.5}" r="1.8" fill="#fecdd3" />
+          <circle cx="${cx+2}" cy="${cy-9.5}" r="1.8" fill="#fecdd3" />
+          <circle cx="${cx}" cy="${cy+7.5}" r="1.8" fill="#fecdd3" />
+        </g>
+      `;
+    case "CANDIDA_ALBICANS":
+      // Dimorphic budding yeast cell elongating into invasive pseudohyphae
+      return `
+        <ellipse cx="${cx-16}" cy="${cy+8}" rx="12" ry="10" fill="#9f1239" stroke="#fda4af" stroke-width="2" />
+        <ellipse cx="${cx-2}" cy="${cy}" rx="11" ry="8" transform="rotate(-25 ${cx-2} ${cy})" fill="#be123c" stroke="#fda4af" stroke-width="2" />
+        <rect x="${cx+4}" y="${cy-20}" width="26" height="8" rx="4" transform="rotate(-35 ${cx+17} ${cy-16})" fill="#e11d48" stroke="#fecdd3" stroke-width="1.8" />
+        <circle cx="${cx-25}" cy="${cy-3}" r="5.5" fill="#be123c" stroke="#fda4af" stroke-width="1.5" />
+      `;
+    case "SALMONELLA":
+    case "E_COLI":
+      // Gram-negative rod-shaped bacillus with peritrichous flagella & pili
+      return `
+        <g stroke="#fda4af" stroke-width="1.8" fill="none" stroke-linecap="round">
+          <path d="M${cx-20},${cy} Q${cx-30},${cy-10} ${cx-38},${cy-4}" />
+          <path d="M${cx-20},${cy+4} Q${cx-30},${cy+14} ${cx-38},${cy+9}" />
+          <path d="M${cx+20},${cy-3} Q${cx+30},${cy-13} ${cx+38},${cy-7}" />
+          <path d="M${cx+20},${cy+3} Q${cx+30},${cy+13} ${cx+38},${cy+8}" />
+        </g>
+        <rect x="${cx-22}" y="${cy-11}" width="44" height="22" rx="11" fill="#9f1239" stroke="#fb7185" stroke-width="2.4" />
+        <path d="M${cx-12},${cy} Q${cx-4},${cy-6} ${cx+4},${cy} T${cx+14},${cy}" fill="none" stroke="#fecdd3" stroke-width="1.8" />
+      `;
+    case "HIV_1":
+      // Enveloped retrovirus with gp120 knobs and conical capsid core
+      return `
+        <circle cx="${cx}" cy="${cy}" r="26" fill="#881337" stroke="#fb7185" stroke-width="2.2" />
+        <!-- gp120 surface spikes -->
+        <circle cx="${cx}" cy="${cy-29}" r="3.5" fill="#fda4af" />
+        <circle cx="${cx+21}" cy="${cy-20}" r="3.5" fill="#fda4af" />
+        <circle cx="${cx+29}" cy="${cy}" r="3.5" fill="#fda4af" />
+        <circle cx="${cx+21}" cy="${cy+20}" r="3.5" fill="#fda4af" />
+        <circle cx="${cx}" cy="${cy+29}" r="3.5" fill="#fda4af" />
+        <circle cx="${cx-21}" cy="${cy+20}" r="3.5" fill="#fda4af" />
+        <circle cx="${cx-29}" cy="${cy}" r="3.5" fill="#fda4af" />
+        <circle cx="${cx-21}" cy="${cy-20}" r="3.5" fill="#fda4af" />
+        <!-- Conical capsid -->
+        <polygon points="${cx-9},${cy-13} ${cx+9},${cy-13} ${cx+5},${cy+14} ${cx-5},${cy+14}" fill="#4c0519" stroke="#fecdd3" stroke-width="1.6" />
+      `;
+    case "STAPH_AUREUS":
+      // Grape-like cluster of golden/crimson Gram+ cocci
+      return `
+        <circle cx="${cx-10}" cy="${cy-10}" r="9.5" fill="#be123c" stroke="#fda4af" stroke-width="1.8" />
+        <circle cx="${cx+9}" cy="${cy-10}" r="9.5" fill="#9f1239" stroke="#fda4af" stroke-width="1.8" />
+        <circle cx="${cx}" cy="${cy}" r="10" fill="#e11d48" stroke="#fecdd3" stroke-width="2" />
+        <circle cx="${cx-11}" cy="${cy+10}" r="9.5" fill="#9f1239" stroke="#fda4af" stroke-width="1.8" />
+        <circle cx="${cx+10}" cy="${cy+10}" r="9.5" fill="#be123c" stroke="#fda4af" stroke-width="1.8" />
+        <circle cx="${cx}" cy="${cy-18}" r="7.5" fill="#9f1239" stroke="#fda4af" stroke-width="1.5" />
+      `;
+    default:
+      return `<circle cx="${cx}" cy="${cy}" r="24" fill="#be123c" stroke="#fda4af" stroke-width="2" />`;
+  }
+}
+
+function renderConceptMapSVG() {
+  const svg = document.getElementById("concept-map-svg");
+  const p = state.currentPathogen;
+  const cx = 430, cy = 330;
+
+  let svgHTML = `
+    <defs>
+      <marker id="arrow-queued" viewBox="0 0 10 10" refX="26" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8" />
+      </marker>
+      <marker id="arrow-optimal" viewBox="0 0 10 10" refX="26" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981" />
+      </marker>
+      <marker id="arrow-synergy" viewBox="0 0 10 10" refX="26" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 1 L 10 5 L 0 9 z" fill="#818cf8" />
+      </marker>
+      <marker id="arrow-warn" viewBox="0 0 10 10" refX="26" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b" />
+      </marker>
+      <marker id="arrow-trap" viewBox="0 0 10 10" refX="26" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 1 L 10 5 L 0 9 z" fill="#f43f5e" />
+      </marker>
+    </defs>
+  `;
+
+  // 1. Subtle radial guide lines from outer effector nodes to center pathogen
+  GAME_DATA.effectors.forEach(eff => {
+    const pos = NODE_COORDS[eff.id];
+    if (!pos) return;
+    svgHTML += `<line x1="${pos.x}" y1="${pos.y}" x2="${cx}" y2="${cy}" stroke="rgba(51, 65, 85, 0.35)" stroke-width="1" />`;
+  });
+
+  // 2. Render Established Connections from previous & current steps
+  Object.entries(state.activeConnections).forEach(([effId, conn]) => {
+    const pos = NODE_COORDS[effId];
+    if (!pos) return;
+
+    let strokeColor = "#10b981";
+    let marker = "url(#arrow-optimal)";
+    if (conn.status === "synergy") { strokeColor = "#818cf8"; marker = "url(#arrow-synergy)"; }
+    else if (conn.status === "warn") { strokeColor = "#f59e0b"; marker = "url(#arrow-warn)"; }
+    else if (conn.status === "trap") { strokeColor = "#f43f5e"; marker = "url(#arrow-trap)"; }
+
+    // If Dendritic Cell priming is active, also draw a bridge arc to adaptive nodes
+    if (effId === "DENDRITIC_CELL") {
+      ["TH1_IFN_G", "TH17_IL17", "CD8_CTL", "B_CELL_IGG", "TH2_IGE"].forEach(adId => {
+        const adPos = NODE_COORDS[adId];
+        if (adPos) {
+          svgHTML += `<line x1="${pos.x}" y1="${pos.y}" x2="${adPos.x}" y2="${adPos.y}" stroke="rgba(245, 158, 11, 0.35)" stroke-width="1.5" stroke-dasharray="4 4" />`;
+        }
+      });
+    }
+
+    // If synergy partner was also connected, draw a glowing synergy link between the two effectors
+    if (conn.partnerId && NODE_COORDS[conn.partnerId] && state.activeConnections[conn.partnerId]) {
+      const pPos = NODE_COORDS[conn.partnerId];
+      svgHTML += `<line x1="${pos.x}" y1="${pos.y}" x2="${pPos.x}" y2="${pPos.y}" stroke="#818cf8" stroke-width="3" stroke-dasharray="5 3" />`;
+    }
+
+    // Connection line from effector node to central pathogen
+    const midX = (pos.x + cx) / 2;
+    const midY = (pos.y + cy) / 2;
+    svgHTML += `
+      <g onclick="inspectNode('${effId}')" style="cursor:pointer;">
+        <line x1="${pos.x}" y1="${pos.y}" x2="${cx}" y2="${cy}"
+              stroke="${strokeColor}" stroke-width="3.5" marker-end="${marker}" />
+        <rect x="${midX - 38}" y="${midY - 10}" width="76" height="20" rx="5"
+              fill="#0f172a" stroke="${strokeColor}" stroke-width="1.2" />
+        <text x="${midX}" y="${midY + 4}" text-anchor="middle" fill="#f8fafc" font-size="10" font-weight="700">
+          ${conn.label}
+        </text>
+      </g>
+    `;
+  });
+
+  // 3. Render Queued (Preview) Connections for the current turn
+  state.selectedEffectors.forEach(effId => {
+    const pos = NODE_COORDS[effId];
+    if (!pos) return;
+    const midX = (pos.x + cx) / 2;
+    const midY = (pos.y + cy) / 2;
+    svgHTML += `
+      <line x1="${pos.x}" y1="${pos.y}" x2="${cx}" y2="${cy}"
+            stroke="#38bdf8" stroke-width="3" class="edge-animated" marker-end="url(#arrow-queued)" />
+      <rect x="${midX - 34}" y="${midY - 10}" width="68" height="19" rx="5"
+            fill="#0284c7" stroke="#38bdf8" stroke-width="1" />
+      <text x="${midX}" y="${midY + 3}" text-anchor="middle" fill="#ffffff" font-size="9.5" font-weight="700">
+        Queued D${state.turn}
+      </text>
+    `;
+  });
+
+  // 4. Render Peripheral Immune Effector Nodes with Custom Anatomical Cell Illustrations
+  GAME_DATA.effectors.forEach(eff => {
+    const pos = NODE_COORDS[eff.id];
+    if (!pos) return;
+    const status = isEffectorUnlocked(eff);
+    const isSelected = state.selectedEffectors.includes(eff.id);
+    const conn = state.activeConnections[eff.id];
+
+    let ringColor = "#14b8a6";
+    if (eff.branch.includes("Bridge")) ringColor = "#f59e0b";
+    else if (eff.branch.includes("Regulatory")) ringColor = "#34d399";
+    else if (eff.branch.includes("Adaptive")) ringColor = "#818cf8";
+
+    if (isSelected) ringColor = "#38bdf8";
+    else if (conn && conn.status === "trap") ringColor = "#f43f5e";
+    else if (conn && (conn.status === "optimal" || conn.status === "synergy")) ringColor = "#10b981";
+
+    const opacity = (!status.ok && !conn) ? "0.48" : "1";
+    const cellArt = renderEffectorArtwork(eff.id, pos.x, pos.y);
+
+    svgHTML += `
+      <g class="node-group" opacity="${opacity}" onclick="toggleEffector('${eff.id}')">
+        ${isSelected || conn ? `<circle cx="${pos.x}" cy="${pos.y}" r="31" fill="none" stroke="${ringColor}" stroke-width="2.5" stroke-dasharray="${isSelected ? '4 3' : 'none'}" />` : ""}
+        ${cellArt}
+        <!-- AP Cost Badge -->
+        <circle cx="${pos.x + 22}" cy="${pos.y - 20}" r="9" fill="#0f172a" stroke="${ringColor}" stroke-width="1.3" />
+        <text x="${pos.x + 22}" y="${pos.y - 16.5}" text-anchor="middle" fill="#f8fafc" font-size="9" font-weight="800">${eff.apCost}</text>
+        <!-- Label Pill -->
+        <rect x="${pos.x - 48}" y="${pos.y + 30}" width="96" height="17" rx="4"
+              fill="rgba(15, 23, 42, 0.92)" stroke="${isSelected || conn ? ringColor : 'rgba(51, 65, 85, 0.85)'}" stroke-width="1" />
+        <text x="${pos.x}" y="${pos.y + 41.5}" text-anchor="middle" fill="#f1f5f9" font-size="9.5" font-weight="600">
+          ${pos.short}
+        </text>
+      </g>
+    `;
+  });
+
+  // 5. Render CENTRAL PATHOGEN ILLUSTRATION & NODE
+  const loadPct = Math.max(0, Math.round((state.pathogenLoad / p.startingLoad) * 100));
+  const shortPathName = p.id === "HIV_1" ? "HIV-1" : (p.name.length > 24 ? p.name.split(" ").slice(0, 2).join(" ") : p.name);
+  const pathogenArt = renderPathogenArtwork(p.id, cx, cy);
+
+  svgHTML += `
+    <g class="node-group" onclick="inspectNode('PATHOGEN')">
+      <circle class="pathogen-pulse" cx="${cx}" cy="${cy}" r="54" fill="none" stroke="#f43f5e" stroke-width="2.5" />
+      <circle cx="${cx}" cy="${cy}" r="50" fill="rgba(30, 27, 46, 0.85)" stroke="#f43f5e" stroke-width="2.5" stroke-dasharray="6 4" />
+      ${pathogenArt}
+      <!-- Burden Badge -->
+      <rect x="${cx - 24}" y="${cy - 58}" width="48" height="17" rx="8" fill="#be123c" stroke="#fda4af" stroke-width="1.2" />
+      <text x="${cx}" y="${cy - 46.5}" text-anchor="middle" fill="#ffffff" font-size="9.5" font-weight="800">
+        ${loadPct}%
+      </text>
+      <!-- Pathogen Name Label -->
+      <rect x="${cx - 84}" y="${cy + 54}" width="168" height="22" rx="6"
+            fill="#0f172a" stroke="#f43f5e" stroke-width="1.4" />
+      <text x="${cx}" y="${cy + 68.5}" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">
+        ${shortPathName}
+      </text>
+    </g>
+  `;
+
+  svg.innerHTML = svgHTML;
+}
+
+function findInteractionRule(pathogenId, effectorId) {
+  let rule = GAME_DATA.interactions.find(
+    r => r.pathogenId === pathogenId && r.effectorId === effectorId
+  );
+  if (!rule) {
+    rule = GAME_DATA.interactions.find(
+      r => r.pathogenId === "ALL_PATHOGENS" && r.effectorId === effectorId
+    );
+  }
+  return rule;
+}
+
+function getPathwayMoleculesSummary(p, eff) {
+  const isInnateSensor = ["DENDRITIC_CELL", "MACROPHAGE_M1", "TYPE1_IFN", "COMPLEMENT", "NEUTROPHIL"].includes(eff.id);
+  if (eff.id === "DENDRITIC_CELL") {
+    return `PRR/PAMP: ${p.prrs} sensing ${p.pamps} • Cytokines: ${p.cytokines}`;
+  }
+  if (eff.id === "MACROPHAGE_M1") {
+    return `PRR/PAMP: ${p.prrs} (${p.pamps}) • Cytokines/Chemokines: ${p.cytokines}`;
+  }
+  if (eff.id === "TYPE1_IFN") {
+    return `PRR/PAMP: ${p.prrs} (${p.pamps}) • Cytokines: IFN-α/β, PKR, JAK1/TYK2-STAT1/2`;
+  }
+  if (eff.id === "COMPLEMENT") {
+    return `PAMP/Surface: ${p.pamps} • Mediators: C3b opsonin, C3a/C5a anaphylatoxins, C5b–9 MAC`;
+  }
+  if (eff.id === "NEUTROPHIL") {
+    return `Chemokines/Receptors: ${p.cytokines} • Effectors: CXCR1/2, NADPH oxidase ROS, NETs`;
+  }
+  if (eff.id === "NK_CELL") {
+    return `Receptors/Cytokines: KIRs (missing MHC-I), NKG2D, CD16 • IFN-γ, Perforin/Granzyme B`;
+  }
+  if (eff.id === "TH1_IFN_G") {
+    return `Polarizing/Effector Cytokines: DC IL-12 → T-bet+ Th1 → IFN-γ, TNF-α, CXCR3 (CXCL9/10)`;
+  }
+  if (eff.id === "TH2_IGE") {
+    return `Polarizing/Effector Cytokines: IL-4, IL-5, IL-13, TSLP → GATA3+ Th2 → B-cell IgE switch`;
+  }
+  if (eff.id === "TH17_IL17") {
+    return `Polarizing/Effector Cytokines: IL-6, IL-23, TGF-β → RORγt+ Th17 → IL-17A, IL-22, CXCL1/CXCL8`;
+  }
+  if (eff.id === "CD8_CTL") {
+    return `Recognition/Effectors: TCR–MHC Class I (${p.category}), CXCL10/CXCR3, Perforin, Granzyme, FasL`;
+  }
+  if (eff.id === "B_CELL_IGG") {
+    return `Help/Effectors: Tfh (CD40L, IL-21, CXCL13/CXCR5) → Neutralizing & Opsonizing IgM/IgG/IgA`;
+  }
+  if (eff.id === "EOSINOPHIL") {
+    return `Chemokine/Cytokine Axis: CCL11 (Eotaxin)/CCR3, IL-5, IgE–FcεRI → Major Basic Protein (MBP)`;
+  }
+  if (eff.id === "TREG_IL10") {
+    return `Regulatory Cytokines: FoxP3+ Treg → IL-10, TGF-β, CTLA-4 (suppresses TNF-α/IL-1β/IL-6)`;
+  }
+  return `Molecules: ${eff.molecules}`;
+}
+
+function executeTurn() {
+  const p = state.currentPathogen;
+  if (state.selectedEffectors.length === 0) {
+    addLog(`Day ${state.turn}`, "No connections selected! Pathogen replicated unchecked.", "trap");
+  }
+
+  let totalPathogenDmg = 0;
+  let totalTissueDmg = 0;
+
+  state.selectedEffectors.forEach(effId => {
+    state.usedEffectorsHistory.add(effId);
+    const eff = GAME_DATA.effectors.find(e => e.id === effId);
+
+    if (effId === "DENDRITIC_CELL" && state.apcPrimedTurn === null) {
+      state.apcPrimedTurn = state.turn;
+    }
+
+    const rule = findInteractionRule(p.id, effId);
+    if (rule) {
+      let dmg = rule.baseDamage;
+      let tissue = rule.tissueDamage;
+      let status = "optimal";
+      if (rule.outcomeTag.includes("Trap") || rule.outcomeTag.includes("Ineffective")) status = "trap";
+      else if (rule.outcomeTag.includes("Needs") || rule.outcomeTag.includes("Bridge")) status = "warn";
+
+      let partnerId = null;
+      if (rule.synergyWith && rule.synergyWith !== "None" && state.selectedEffectors.includes(rule.synergyWith)) {
+        const partner = GAME_DATA.effectors.find(e => e.id === rule.synergyWith);
+        dmg += rule.synergyBonus;
+        status = "synergy";
+        partnerId = rule.synergyWith;
+        addLog(
+          `Synergy Link (+${rule.synergyBonus} Clearance)`,
+          `${eff.name.split("(")[0].trim()} + ${partner ? partner.name.split("(")[0].trim() : rule.synergyWith} connected simultaneously!`,
+          "synergy"
+        );
+      }
+
+      const shortLabel = dmg > 0 ? `-${dmg} Load` : (tissue < 0 ? `+${Math.abs(tissue)} Heal` : `-${tissue} Tissue`);
+      state.activeConnections[effId] = {
+        status,
+        turn: state.turn,
+        label: shortLabel,
+        feedback: rule.feedback,
+        partnerId
+      };
+      state.inspectedNodeId = effId;
+
+      const molSummary = getPathwayMoleculesSummary(p, eff);
+      addLog(`Day ${state.turn} • ${eff.name.split("(")[0].trim()}`, rule.feedback, status, molSummary);
+      totalPathogenDmg += dmg;
+      totalTissueDmg += tissue;
+    } else {
+      const fallbackDmg = 10;
+      const fallbackTissue = 5;
+      const molSummary = getPathwayMoleculesSummary(p, eff);
+      state.activeConnections[effId] = {
+        status: "warn",
+        turn: state.turn,
+        label: `-${fallbackDmg} Load`,
+        feedback: `${eff.name} formed a general response against ${p.name}.`
+      };
+      state.inspectedNodeId = effId;
+      addLog(
+        `Day ${state.turn} • ${eff.name.split("(")[0].trim()}`,
+        `${eff.name} mounted a generalized response (-${fallbackDmg} load, -${fallbackTissue} tissue).`,
+        "warn",
+        molSummary
+      );
+      totalPathogenDmg += fallbackDmg;
+      totalTissueDmg += fallbackTissue;
+    }
+  });
+
+  state.pathogenLoad = Math.max(0, state.pathogenLoad - totalPathogenDmg);
+  state.hostHealth = Math.min(
+    GAME_DATA.settings.Starting_Host_Health,
+    Math.max(0, state.hostHealth - totalTissueDmg)
+  );
+
+  if (state.hostHealth <= 0) {
+    state.selectedEffectors = [];
+    updateBattleUI();
+    showDebrief(false, "Fatal Immunopathology / Organ Failure! Excessive collateral inflammation destroyed host tissue before the infection resolved.");
+    return;
+  }
+
+  if (state.pathogenLoad <= 0) {
+    state.clearedIds.add(p.id);
+    state.selectedEffectors = [];
+    updateBattleUI();
+    showDebrief(true, `You eliminated ${p.name} by Day ${state.turn} while preserving ${state.hostHealth}% host tissue integrity!`);
+    return;
+  }
+
+  state.pathogenLoad += p.replicationRate;
+  addLog(
+    `End of Day ${state.turn}`,
+    `${p.name} replicated (+${p.replicationRate} load). Current burden: ${state.pathogenLoad}.`,
+    "warn"
+  );
+
+  if (state.turn >= GAME_DATA.settings.Max_Turns_Per_Scenario) {
+    state.selectedEffectors = [];
+    updateBattleUI();
+    showDebrief(false, `Time Expired (Day ${state.turn}): ${p.name} overwhelmed the host (Final Pathogen Load: ${state.pathogenLoad}).`);
+    return;
+  }
+
+  state.turn += 1;
+  state.selectedEffectors = [];
+  updateBattleUI();
+}
+
+function addLog(title, text, type = "optimal", molecules = "") {
+  state.logs.unshift({ title, text, type, molecules });
+}
+
+function renderLogs() {
+  const feed = document.getElementById("log-list");
+  document.getElementById("log-count").textContent = `${state.logs.length} steps`;
+  feed.innerHTML = "";
+  state.logs.forEach(item => {
+    const div = document.createElement("div");
+    div.className = `log-item ${item.type}`;
+    div.innerHTML = `
+      <div class="t">${item.title}</div>
+      <div>${item.text}</div>
+      ${item.molecules ? `<div class="mol-tag">${item.molecules}</div>` : ""}
+    `;
+    feed.appendChild(div);
+  });
+}
+
+function showDebrief(isWin, summaryText) {
+  const p = state.currentPathogen;
+  const titleEl = document.getElementById("modal-title");
+  titleEl.textContent = isWin ? `Pathogen Cleared: ${p.name}` : `Host Overwhelmed: ${p.name}`;
+  titleEl.className = "modal-title " + (isWin ? "win" : "lose");
+
+  document.getElementById("modal-subtitle").textContent = summaryText;
+  document.getElementById("modal-takeaway").textContent = p.takeaway || p.vignette;
+
+  const nodes = new Set();
+  state.usedEffectorsHistory.forEach(id => {
+    const eff = GAME_DATA.effectors.find(e => e.id === id);
+    if (eff && eff.mapNode) nodes.add(eff.mapNode);
+  });
+  if (nodes.size === 0) {
+    nodes.add("Innate vs Adaptive Immunity");
+    nodes.add("Pattern Recognition Receptors (PRRs)");
+  }
+
+  const baseUrl = GAME_DATA.settings.Concept_Map_Base_URL;
+  const params = new URLSearchParams({
+    pathogen: p.id,
+    nodes: Array.from(nodes).join(",")
+  });
+  document.getElementById("modal-map-btn").href = `${baseUrl}?${params.toString()}`;
+
+  document.getElementById("debrief-modal").classList.remove("hidden");
+}
+
+function retryCurrentPathogen() {
+  document.getElementById("debrief-modal").classList.add("hidden");
+  if (state.currentPathogen) {
+    startScenario(state.currentPathogen.id);
+  }
+}
+
+function showAdaptiveLockModal(eff, status) {
+  const modal = document.getElementById("adaptive-lock-modal");
+  const titleEl = document.getElementById("lock-modal-title");
+  const bodyEl = document.getElementById("lock-modal-body");
+  const tipEl = document.getElementById("lock-modal-tip");
+
+  titleEl.textContent = `${eff.name.split("(")[0].trim()} — Locked (${status.reason})`;
+
+  if (eff.id === "TREG_IL10") {
+    bodyEl.textContent = `Regulatory T cells (${eff.name}) cannot be activated on Day 1. Clonal expansion and differentiation of antigen-specific FoxP3+ Tregs require initial innate inflammation and antigen presentation before regulatory suppression begins on Day ${eff.earliestTurn}+.`;
+    tipEl.textContent = "Use Day 1 innate sensors (such as Dendritic Cells, Complement, or PRR-driven effectors) first; Tregs unlock starting on Day 2.";
+  } else if (state.turn < eff.earliestTurn && state.apcPrimedTurn === null) {
+    bodyEl.textContent = `Adaptive B cells and T cells cannot be deployed on Day ${state.turn}. Naive lymphocytes circulate in secondary lymphoid organs at very low precursor frequencies and require antigen presentation by a Dendritic Cell (APC) plus ~2 days of clonal expansion and differentiation before effector cells arrive at the infected tissue (Day 3+).`;
+    tipEl.textContent = "Action Step: Activate Dendritic Cell (PRR Sensing & APC Priming) during Days 1–2 so it can migrate via CCR7 to the lymph node and prime B and T cells for Day 3+.";
+  } else if (state.turn < eff.earliestTurn) {
+    const readyTurn = state.apcPrimedTurn + GAME_DATA.settings.APC_Priming_Delay_Turns;
+    bodyEl.textContent = `Your Dendritic Cell is currently migrating to the draining lymph node and priming naive B and T lymphocytes. Clonal expansion and effector differentiation take ${GAME_DATA.settings.APC_Priming_Delay_Turns} days, so ${eff.name} will be ready on Day ${readyTurn}.`;
+    tipEl.textContent = "During Days 1–2, rely on fast-acting innate defenses (Complement, Neutrophils, Macrophages, NK Cells, or Type I IFNs) to contain pathogen replication.";
+  } else {
+    bodyEl.textContent = `${eff.name} requires prior antigen presentation and co-stimulation (CD80/86 + polarizing cytokines) from a Dendritic Cell before naive B or T cells can clonally expand.`;
+    tipEl.textContent = "Select Dendritic Cell (PRR Sensing & APC Priming) now—your B and T cell effectors will unlock 2 days after APC priming.";
+  }
+
+  modal.classList.remove("hidden");
+}
+
+function closeLockModal() {
+  document.getElementById("adaptive-lock-modal").classList.add("hidden");
+}
+
+function closeModalAndReturn() {
+  document.getElementById("debrief-modal").classList.add("hidden");
+  showSelectionScreen();
+}
+
+init();
+</script>
+</body>
+</html>
